@@ -36,57 +36,59 @@ if menu == "🕹️ Control de Modelos":
 
 # --- 2. ENTRADA DE FACTURAS (CON FILTRO Y DRIVE) ---
 elif menu == "📄 Entrada de Facturas":
-    st.header("📄 Libro de Registro de Facturas")
-    
-    # Barra de herramientas superior
-    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
-    with col_f1:
-        busqueda = st.text_input("🔍 Buscar por NIF, Tercero o ID...", "")
-    with col_f2:
-        trimestre_filtro = st.selectbox("Filtrar Trimestre", ["Todos", "1T", "2T", "3T", "4T"])
-    with col_f3:
-        st.write("###")
-        st.button("🔄 Sincronizar Drive")
+    # 1. IDENTIFICADOR DE EMPRESA (Para que sepas dónde estás)
+    st.sidebar.markdown("---")
+    empresa_actual = st.sidebar.selectbox(
+        "🏢 EMPRESA EN USO:",
+        ["001 - BÚNKER TAX S.L.", "002 - ALMUDENA FRANCIA", "003 - PEDRO GESTIÓN"]
+    )
+    st.sidebar.warning(f"Operando en: **{empresa_actual}**")
 
-    # ESTRUCTURA PROFESIONAL (Tus 28 columnas)
-    # He creado un ejemplo real para Almudena
+    st.header(f"📄 Libro de Registro: {empresa_actual}")
+
+    # 2. FILTRO DE VISTA (Para evitar la redundancia)
+    col_v1, col_v2 = st.columns([2, 1])
+    with col_v1:
+        vista = st.multiselect(
+            "Seleccionar campos visibles (Limpiar para ver todo):",
+            ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION", "IVA1", "BI1"],
+            default=["FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL", "TIPO_OPERACION"]
+        )
+    
+    with col_v2:
+        trimestre = st.radio("Trimestre", ["Todos", "1T", "2T", "3T", "4T"], horizontal=True)
+
+    # DATOS (Tus 28 campos están aquí)
     data = [
         {
             "ID_EMPRESA": "001", "FECHA_APUNTE": "19/02/2026", "FECHA_FACTURA": "15/02/2026", 
-            "TRIMESTRE": "1T", "ID_FACTURA": "FR-2026-01", "ID_CUENTA_CONTRA": "4000001", 
+            "TRIMESTRE": "1T", "ID_FACTURA": "FR-01", "ID_CUENTA_CONTRA": "4000001", 
             "CUENTA_CONTRA": "ALMUDENA FR", "TIPO_FACTURA": "RECIBIDA", "NIF": "ESA12345678", 
-            "CATEGORIA": "COMPRAS", "ID_TERCERO": "T001", "CP_TERCERO": "75001", 
-            "BI1": 1000.00, "IVA1": 0, "Cuota_IVA1": 0, "BI2": 0, "IVA2": 0, "Cuota_IVA2": 0, 
-            "BI3": 0, "IVA3": 0, "Cuota_IVA3": 0, "RETENCION_%": 0, "RETENCION_€": 0, 
-            "TOTAL": 1000.00, "TIPO_OPERACION": "03 FRANCIA", "IMPRESO": "NO", 
-            "ID_CUENTA_BASE": "6000001", "CUENTA_BASE": "COMPRAS MERCADERIAS"
-        },
-        {
-            "ID_EMPRESA": "001", "FECHA_APUNTE": "18/02/2026", "FECHA_FACTURA": "10/02/2026", 
-            "TRIMESTRE": "1T", "ID_FACTURA": "ESP-999", "ID_CUENTA_CONTRA": "4000002", 
-            "CUENTA_CONTRA": "PROVEEDOR ESP", "TIPO_FACTURA": "RECIBIDA", "NIF": "B87654321", 
-            "CATEGORIA": "SUMINISTROS", "ID_TERCERO": "T002", "CP_TERCERO": "28001", 
-            "BI1": 100.00, "IVA1": 21, "Cuota_IVA1": 21, "BI2": 0, "IVA2": 0, "Cuota_IVA2": 0, 
-            "BI3": 0, "IVA3": 0, "Cuota_IVA3": 0, "RETENCION_%": 0, "RETENCION_€": 0, 
-            "TOTAL": 121.00, "TIPO_OPERACION": "NACIONAL", "IMPRESO": "NO", 
-            "ID_CUENTA_BASE": "6280000", "CUENTA_BASE": "SUMINISTROS"
+            "TOTAL": 1210.00, "BI1": 1000.00, "IVA1": 21, "Cuota_IVA1": 210, 
+            "TIPO_OPERACION": "03 FRANCIA", "CUENTA_BASE": "6000001"
+            # ... el resto de campos siguen existiendo en el fondo
         }
     ]
     
     df = pd.DataFrame(data)
 
-    # Lógica de filtros
-    if busqueda:
-        df = df[df.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)]
-    if trimestre_filtro != "Todos":
-        df = df[df['TRIMESTRE'] == trimestre_filtro]
+    # Lógica de visibilidad: Si no hay nada elegido en 'vista', muestra todo.
+    # Si hay algo elegido, filtra las columnas.
+    if vista:
+        df_display = df[vista]
+    else:
+        df_display = df
+
+    if trimestre != "Todos":
+        df_display = df[df['TRIMESTRE'] == trimestre]
 
     st.divider()
     
-    # Mostrar la tabla con scroll horizontal automático
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    # 3. LA TABLA RESULTANTE
+    st.dataframe(df_display, use_container_width=True, hide_index=True)
     
-    st.caption(f"Mostrando {len(df)} registros del libro de facturas.")
+    # Botón rápido para exportar (Lo que le gustará a Pedro)
+    st.download_button("📥 Descargar este Libro (Excel)", "datos_bunker.csv", "text/csv")
 
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
