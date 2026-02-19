@@ -48,4 +48,53 @@ with col_pdf:
             <iframe src="{current_pdf['pdf_path']}" width="100%" height="100%" style="border:none;"></iframe>
         </div>
     """, unsafe_allow_html=True)
-    st.
+    st.caption(f"Visualizando: {current_pdf['pdf_path'].split('/')[-1]}")
+
+# COLUMNA DERECHA: LA FICHA BLANCA DE VALIDACIÓN
+with col_ficha:
+    st.subheader("📝 Ficha de Asiento (Valida los 28 campos)")
+    
+    with st.container(border=True):
+        # FILA 1: DATOS CLAVE
+        f_prov, f_cta, f_total = st.columns([2, 1, 1])
+        with f_prov: st.text_input("PROVEEDOR", value=current_pdf['prov'])
+        with f_cta: st.selectbox("CTA. TRÁFICO", ["410.00012", "400.00005"], key=f"cta_traf_{current_pdf['id']}")
+        with f_total: total_input = st.number_input("TOTAL FACTURA", value=current_pdf['total'], format="%.2f", key=f"total_{current_pdf['id']}")
+
+        st.divider()
+
+        # FILA 2: BASES E IVA
+        f_cta_gasto, f_base, f_iva, f_cuota = st.columns([1.5, 1.5, 1, 1])
+        iva_perc = f_iva.selectbox("IVA (%)", [21, 10, 4, 0], index=[21,10,4,0].index(current_pdf['iva']), key=f"iva_{current_pdf['id']}")
+        
+        base_calc = round(total_input / (1 + (iva_perc / 100)), 2)
+        with f_cta_gasto: st.selectbox("CTA. GASTO", ["629.00000", "600.00000"], key=f"cta_gasto_{current_pdf['id']}")
+        with f_base: base_input = st.number_input("BASE IMPONIBLE", value=base_calc, key=f"base_{current_pdf['id']}")
+        
+        cuota_calc = round(base_input * (iva_perc / 100), 2)
+        f_cuota.metric("CUOTA", f"{cuota_calc:.2f} €")
+
+        # FILA 3: SUPLIDOS Y CUADRE
+        st.write("###")
+        sobrante = round(total_input - (base_input + cuota_calc), 2)
+        
+        f_cta_sup, f_imp_sup, f_cuadre = st.columns([1.5, 1.5, 1])
+        with f_cta_sup: st.selectbox("CTA. SUPLIDOS", options=["", "555.00000", "410.99999"], index=0, key=f"cta_sup_{current_pdf['id']}")
+        with f_imp_sup: st.number_input("IMPORTE SUPLIDO", value=sobrante, disabled=True, key=f"suplido_{current_pdf['id']}")
+        with f_cuadre:
+            if abs(sobrante) < 0.01: st.success("✅ CUADRADO")
+            else: st.warning("⚠️ DESCUADRE")
+
+    # BOTÓN DE ACCIÓN (Contabilizar y pasar al siguiente)
+    st.write("###")
+    with st.form("form_contabilizar"):
+        st.form_submit_button("🚀 CONTABILIZAR Y SIGUIENTE", use_container_width=True, type="primary", on_click=siguiente_factura)
+
+# --- NAVEGACIÓN GLOBAL ---
+st.sidebar.title("📑 Facturas Pendientes")
+for i, f in enumerate(st.session_state.facturas_pendientes):
+    is_selected = (i == st.session_state.current_factura_idx)
+    button_label = f"#{i+1} {f['prov']}"
+    if st.sidebar.button(button_label, use_container_width=True, key=f"nav_{f['id']}"):
+        st.session_state.current_factura_idx = i
+        st.experimental_rerun() # Para forzar la recarga del PDF si cambia la URL
