@@ -75,8 +75,8 @@ elif menu == "📄 Entrada de Facturas":
     st.dataframe(df[orden_fichas], use_container_width=True, hide_index=True)
     # Tu botón de Drive para mañana
     if st.button("🚀 Finalizar Configuración"):
-    st.balloons()
-    st.success("¡Estructura de hoy guardada con éxito, Alejandro!")
+        st.balloons()
+        st.success("¡Estructura de hoy guardada con éxito, Alejandro!")
 
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
