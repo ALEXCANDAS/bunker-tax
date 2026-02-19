@@ -1,85 +1,81 @@
 import streamlit as st
 
-# 1. SETUP SaaS PRO
-st.set_page_config(layout="wide", page_title="Búnker Pro | Auditoría 360")
+# 1. CONFIGURACIÓN SaaS ULTRA-WIDE
+st.set_page_config(layout="wide", page_title="Búnker Pro | Libro Maestro")
 
-# CSS para banderas y alertas de auditoría
+# CSS para alinear totales y dar estética de software profesional
 st.markdown("""
     <style>
-    .badge-iso { font-size: 1.2rem; margin-right: 10px; }
-    .status-ok { color: #2ecc71; font-weight: bold; }
-    .status-alert { color: #e74c3c; font-weight: bold; animation: blinker 1.5s linear infinite; }
-    @keyframes blinker { 50% { opacity: 0; } }
-    .audit-row { border-bottom: 1px solid #eee; padding: 10px 0; }
+    .total-row { background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #3b82f6; padding: 10px 0; }
+    .badge-iso { font-size: 1.2rem; }
+    .stMetric { background: none; border: none; padding: 0; }
     </style>
     """, unsafe_allow_html=True)
 
-tab_recibidas, tab_emitidas, tab_registro = st.tabs(["📥 RECIBIDAS", "📤 EMITIDAS", "📋 CONTROL DE MODELOS"])
-
-with tab_registro:
-    # FILTROS DE SEGMENTACIÓN PRO
-    f1, f2, f3, f4, f5 = st.columns([1, 1, 1, 1, 2])
-    f_tri = f1.selectbox("TRIMESTRE", ["Todos", "1T", "2T", "3T", "4T"])
-    f_mod = f2.selectbox("MODELO", ["Todos", "303", "111", "347", "349"])
-    f_pais = f3.selectbox("ORIGEN", ["Todos", "ES 🇪🇸", "UE 🇪🇺", "EXT 🌎"])
-    f_tipo = f4.selectbox("FLUJO", ["Todos", "Recibidas", "Emitidas"])
-    f_busq = f5.text_input("🔍 FILTRO NIF / PROVEEDOR / CUENTA", placeholder="Ej: B12345678...")
-
-    st.divider()
-
-    # CABECERA TÉCNICA (A3/Exact Style)
-    # Aud. | Origen | Fecha | Sujeto / NIF | Base | IVA | Ret. | Total | Banderas Modelos | Visor
-    h = st.columns([0.4, 0.6, 0.8, 1.8, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
-    header_labels = ["AUD", "ORG", "FECHA", "SUJETO / NIF", "BASE", "IVA", "RET.", "TOTAL", "MODELOS", "VIS"]
-    for col, label in zip(h, header_labels):
-        col.markdown(f"**{label}**")
-
-    # FUNCIÓN DE FILA DE AUDITORÍA
-    def audit_row(audit_st, flag, fecha, nombre, nif, base, iva, ret, total, modelos, error_msg=""):
-        r = st.columns([0.4, 0.6, 0.8, 1.8, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+# --- PARTE SUPERIOR: ENTRADA / EDICIÓN (RECIBIDAS) ---
+with st.expander("📥 PANEL DE ENTRADA DE FACTURAS", expanded=True):
+    col_pdf, col_ficha = st.columns([1.1, 1])
+    with col_pdf:
+        st.image("https://via.placeholder.com/800x300?text=VISOR+DE+FACTURA+ACTUAL", use_container_width=True)
+    with col_ficha:
+        # Aquí va tu ficha "Exact" que ya tenemos perfeccionada con el IVA en medio
+        st.markdown("### ⚡ Validación Rápida")
+        c1, c2, c3 = st.columns([2, 1, 1])
+        c1.text_input("PROVEEDOR", value="ADOBE SYSTEMS IE")
+        c2.text_input("NIF", value="IE6362892H")
+        c3.selectbox("ORG", ["🇪🇸", "🇪🇺", "🌎"], index=1)
         
-        # Auditoría IA vs Humano
-        st_icon = "⚠️" if audit_st == "alert" else "✅"
-        r[0].markdown(f'<span class="status-{"alert" if audit_st=="alert" else "ok"}">{st_icon}</span>', unsafe_allow_html=True)
-        
-        r[1].markdown(f'<span class="badge-iso">{flag}</span>', unsafe_allow_html=True)
-        r[2].write(fecha)
-        r[3].markdown(f"**{nombre}** <br><small>{nif}</small>", unsafe_allow_html=True)
-        r[4].write(f"{base}€")
-        r[5].write(f"{iva}€")
-        r[6].write(f"{ret}€" if ret != "-" else "-")
-        r[7].write(f"**{total}€**")
-        
-        # Banderas de Modelos (Colores dinámicos)
-        b_html = ""
-        for m in modelos:
-            c = "#01579b" if m=="303" else "#e65100" if m=="111" else "#4a148c" if m=="347" else "#27ae60"
-            b_html += f'<span style="background:{c}; color:white; padding:2px 5px; border-radius:3px; margin-right:3px; font-size:10px;">M-{m}</span>'
-        r[8].markdown(b_html, unsafe_allow_html=True)
-        
-        with r[9].expander("👁️"):
-            st.image("https://via.placeholder.com/400x500?text=FACTURA+AUDITADA", use_container_width=True)
-            if error_msg: st.error(f"IA Detecta: {error_msg}")
+        # El motor de importes
+        i1, i2, i3 = st.columns([1, 0.8, 1])
+        i1.number_input("BASE", value=120.00)
+        i2.selectbox("IVA %", [21, 10, 4, 0], index=3)
+        i3.number_input("CUOTA", value=0.00)
+        st.button("🚀 CONTABILIZAR (ENTER)", use_container_width=True, type="primary")
 
-    # DATOS DE EJEMPLO CON AUDITORÍA REAL
-    # 1. Caso Normal
-    audit_row("ok", "🇪🇸", "19/02", "BAR EL GRIEGO", "B12345678", "66.34", "6.63", "-", "72.97", ["303"])
+st.divider()
+
+# --- PARTE INFERIOR: LIBRO DE REGISTRO (EMITIDAS Y RECIBIDAS CON FILTRO) ---
+st.subheader("📋 Libro de Registro y Auditoría de Modelos")
+
+# Filtros rápidos de segmento
+f_c1, f_c2, f_c3 = st.columns([1, 1, 3])
+tipo_libro = f_c1.selectbox("LIBRO", ["Recibidas", "Emitidas", "Inversiones"])
+tri_libro = f_c2.selectbox("TRIMESTRE", ["1T", "2T", "3T", "4T", "Anual"])
+search = f_c3.text_input("🔍 Buscar por NIF, Nombre o Cuenta...")
+
+# CABECERA DEL LIBRO (Alineada con los totales de abajo)
+# Est | Org | Fecha | Sujeto / NIF | Base | IVA | Ret | Total | Modelos
+h = st.columns([0.4, 0.5, 0.8, 2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+cols = ["AUD", "ORG", "FECHA", "SUJETO / NIF", "BASE", "IVA", "RET", "TOTAL", "MODELOS", "VIS"]
+for col, text in zip(h, cols):
+    col.markdown(f"**{text}**")
+
+# FILAS DEL REGISTRO (Ejemplos)
+def linea_libro(aud, org, fecha, sujeto, nif, base, iva, ret, total, modelos):
+    r = st.columns([0.4, 0.5, 0.8, 2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+    r[0].write("✅" if aud=="ok" else "⚠️")
+    r[1].write(org)
+    r[2].write(fecha)
+    r[3].markdown(f"**{sujeto}** <br><small>{nif}</small>", unsafe_allow_html=True)
+    r[4].write(f"{base}€")
+    r[5].write(f"{iva}€")
+    r[6].write(f"{ret}€" if ret != "-" else "-")
+    r[7].write(f"**{total}€**")
     
-    # 2. Caso Profesional con Retención (M-111)
-    audit_row("ok", "🇪🇸", "18/02", "NACHO SEVILLA ASOC.", "B99887766", "200.00", "42.00", "30.00", "212.00", ["303", "111"])
-    
-    # 3. ALERTA DE MARINA: Operación Intracomunitaria mal clasificada
-    audit_row("alert", "🇪🇺", "17/02", "ADOBE SYSTEMS IE", "IE6362892H", "120.00", "0.00", "-", "120.00", ["303"], 
-              error_msg="NIF Irlandés detectado. Debería ser M-349 y Autorepercusión IVA.")
-    
-    # 4. Caso 347 (Grandes volúmenes)
-    audit_row("ok", "🇪🇸", "15/02", "CONSTRUCTORA X", "B55544433", "4000.00", "840.00", "-", "4840.00", ["303", "347"])
+    banderas = "".join([f'<span style="background:#3b82f6;color:white;padding:2px 4px;border-radius:3px;margin-right:2px;font-size:10px;">M-{m}</span>' for m in modelos])
+    r[8].markdown(banderas, unsafe_allow_html=True)
+    r[9].button("👁️", key=sujeto)
 
-    st.divider()
+linea_libro("ok", "🇪🇸", "19/02", "BAR EL GRIEGO", "B12345678", "66.34", "6.63", "-", "72.97", ["303"])
+linea_libro("ok", "🇪🇸", "18/02", "NACHO SEVILLA", "B99887766", "200.00", "42.00", "30.00", "212.00", ["303", "111"])
+linea_libro("alert", "🇪🇺", "17/02", "ADOBE IE", "IE6362892H", "120.00", "0.00", "-", "120.00", ["303", "349"])
 
-    # RESUMEN CUADRE 390 / ANUAL
-    c_b, c_i, c_r, c_t = st.columns(4)
-    c_b.metric("Total Base", "4.386,34 €", help="Cifra para el 390")
-    c_i.metric("Total IVA", "888,63 €")
-    c_r.metric("Total Retenciones", "30,00 €", help="Cifra para el 190")
-    c_t.metric("Acumulado Diario", "5.244,97 €")
+# --- LA LÍNEA DE TOTALES (DEBAJO DE CADA COLUMNA) ---
+st.markdown('<div class="total-row">', unsafe_allow_html=True)
+t = st.columns([0.4, 0.5, 0.8, 2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+t[3].write("TOTALES CONTROL:")
+t[4].write("386,34€") # Base debajo de Base
+t[5].write("48,63€")  # IVA debajo de IVA
+t[6].write("30,00€")  # Ret debajo de Ret
+t[7].write("404,97€") # Total debajo de Total
+st.markdown('</div>', unsafe_allow_html=True)
