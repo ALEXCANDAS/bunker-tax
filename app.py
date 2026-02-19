@@ -1,78 +1,61 @@
 import streamlit as st
 import pandas as pd
 
-# Configuración de página estilo SaaS
-st.set_page_config(page_title="Búnker Pro | Tax Management", layout="wide")
+# 1. ESTADO DE SESIÓN (La memoria del SaaS)
+if 'db' not in st.session_state:
+    # Simulamos una base de datos ya cargada con los 28 campos
+    st.session_state.db = pd.DataFrame(columns=[
+        "FECHA", "NIF", "CLIENTE", "TOTAL", "BI", "IVA", "ESTADO", "TRIMESTRE", "OPERACION"
+    ])
+if 'cols_active' not in st.session_state:
+    st.session_state.cols_active = ["FECHA", "CLIENTE", "TOTAL", "ESTADO"]
 
-# 1. MEMORIA DE SESIÓN (PERSISTENCIA TAXDOME)
-if 'cols_visibles' not in st.session_state:
-    st.session_state.cols_visibles = ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "ESTADO"]
+# --- UI CONFIGURATION (El Esqueleto) ---
+st.set_page_config(layout="wide", page_title="Búnker Tax Pro")
 
-# --- SIDEBAR MINIMALISTA ---
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/906/906300.png", width=50) # Un logo pro
-    st.title("BÚNKER TAX")
-    st.session_state.empresa = st.selectbox("Empresa Activa", ["001 - BÚNKER TAX S.L.", "002 - ALMUDENA FR"])
-    st.divider()
-    menu = st.radio("PRINCIPAL", ["📋 Pipeline", "📄 Facturas (Libro)", "📂 Documentos", "⚙️ Configuración"])
+# --- BARRA SUPERIOR DE ACCIONES (Donde todos fallan, aquí acertamos) ---
+col_t, col_a = st.columns([2, 1])
+with col_t:
+    st.title("🛡️ Búnker Control Center")
+    st.caption(f"Gestión inteligente de asientos para: **{st.session_state.get('empresa', 'Empresa Demo')}**")
 
-# --- VISTA: LIBRO DE FACTURAS (ESTILO TAXDOME) ---
-if menu == "📄 Facturas (Libro)":
-    # Cabecera con Acciones Críticas
-    col_t, col_a = st.columns([3, 1])
-    with col_t:
-        st.title(f"📄 Registro de Facturas")
-        st.info(f"📍 Operando en: {st.session_state.empresa}")
-    
-    with col_a:
-        st.write("###")
-        if st.button("🔄 Sincronizar Google Drive", use_container_width=True, type="primary"):
-            st.toast("Conectando con Drive API...")
+with col_a:
+    st.write("###")
+    c_btn1, c_btn2 = st.columns(2)
+    c_btn1.button("🔄 Sync Drive", type="primary", use_container_width=True)
+    if c_btn2.button("➕ Nuevo Asiento", use_container_width=True):
+        st.toast("Abriendo entrada rápida...")
 
-    # BARRA DE HERRAMIENTAS (El "Esqueleto" Pro)
-    t1, t2, t3 = st.tabs(["🔍 Filtros Rápidos", "🛠️ Configurar Columnas", "📊 Exportar"])
-    
-    with t1:
-        c1, c2, c3 = st.columns(3)
-        c1.selectbox("Trimestre", ["1T", "2T", "3T", "4T", "Anual"])
-        c2.multiselect("Estado", ["Pendiente", "Revisado", "Contabilizado"], default=["Pendiente"])
-        c3.text_input("Buscar por NIF o Cliente...")
+# --- PANEL DINÁMICO (El corazón del sistema) ---
+tab1, tab2, tab3 = st.tabs(["📋 Libro de Registro", "⚙️ Configuración de Panel", "📊 Análisis"])
 
-    with t2:
-        # Aquí están tus 28 campos organizados para activar/desactivar con un clic
-        campos_taxdome = [
-            "FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "ESTADO",
-            "BI1", "IVA1", "TRIMESTRE", "TIPO_OPERACION", "ID_FACTURA",
-            "CATEGORIA", "CUENTA_BASE", "RETENCION_€", "CP_TERCERO"
-        ]
-        st.session_state.cols_visibles = st.multiselect(
-            "Selecciona ventanillas de visualización:",
-            options=campos_taxdome,
-            default=st.session_state.cols_visibles
-        )
+with tab2:
+    st.subheader("🛠️ Personalización de Ventanillas")
+    # Esto es lo que permite que el panel sea DINÁMICO al instante
+    all_fields = ["FECHA", "NIF", "CLIENTE", "TOTAL", "BI", "IVA", "ESTADO", "TRIMESTRE", "OPERACION"]
+    st.session_state.cols_active = st.multiselect(
+        "Elige qué columnas quieres en tu lectura óptima:",
+        options=all_fields,
+        default=st.session_state.cols_active
+    )
 
-    # DATOS (La tabla con estilo profesional)
-    # Simulamos la carga real
-    data_raw = {col: ["---" for _ in range(10)] for col in campos_taxdome}
-    df = pd.DataFrame(data_raw)
-    
-    # Inyectamos algunos datos para que se vea el "vibe"
-    df["ESTADO"] = "Pendiente"
-    df["FECHA_FACTURA"] = "19/02/2026"
-    df["CUENTA_CONTRA"] = "CLIENTE ESTONIA S.A."
-    df["TOTAL"] = "1.500,00 €"
+with tab1:
+    # Datos de ejemplo para que veas el "Vibe"
+    data = [
+        {"FECHA": "19/02/2026", "NIF": "B12345678", "CLIENTE": "Almudena FR", "TOTAL": 1210.00, "BI": 1000, "IVA": 210, "ESTADO": "Pendiente", "TRIMESTRE": "1T", "OPERACION": "01 Interior"},
+        {"FECHA": "20/02/2026", "NIF": "A87654321", "CLIENTE": "Estonia SaaS", "TOTAL": 500.00, "BI": 500, "IVA": 0, "ESTADO": "Revisado", "TRIMESTRE": "1T", "OPERACION": "03 UE"}
+    ]
+    df_display = pd.DataFrame(data)
 
-    st.divider()
-
-    # Muestra de la tabla con el orden y selección guardados
-    if st.session_state.cols_visibles:
-        st.dataframe(
-            df[st.session_state.cols_visibles], 
-            use_container_width=True, 
-            hide_index=True
-        )
-    else:
-        st.warning("Selecciona columnas en 'Configurar Columnas' para ver datos.")
+    # LA TABLA DINÁMICA (Editable para que la introducción sea como Excel)
+    st.data_editor(
+        df_display[st.session_state.cols_active],
+        use_container_width=True,
+        hide_index=True,
+        num_rows="dynamic", # ¡ESTO permite añadir asientos rápido!
+        key="editor_asientos"
+    )
 
 # --- FOOTER ---
-st.caption("Búnker Pro v2.0 | Inspirado en estándares TaxDome Estonia")
+st.divider()
+st.info("💡 Consejo Antigravity: Puedes editar directamente sobre la tabla para una introducción de asientos ultra-rápida.")
