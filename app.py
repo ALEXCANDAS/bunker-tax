@@ -1,78 +1,67 @@
 import streamlit as st
 
-# 1. CONFIGURACIÓN ULTRA-WIDE
-st.set_page_config(layout="wide", page_title="Búnker Pro | Flujo Optimizado")
+st.set_page_config(layout="wide", page_title="Búnker Pro | Exact Flow")
 
-# Estilos para eliminar márgenes y mejorar la densidad visual
+# CSS para máxima densidad y f.lux friendly
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem; padding-bottom: 0rem; }
-    .stMetric { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    div[data-testid="column"] { padding: 0px 5px; }
+    .block-container { padding-top: 1rem; }
+    .stNumberInput input { font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. INTERFAZ DUAL (PDF Izquierda | Ficha Derecha)
-col_pdf, col_ficha = st.columns([1.2, 1])
+col_pdf, col_ficha = st.columns([1.1, 1])
 
 with col_pdf:
-    st.subheader("📄 Documento Fuente")
-    # Visor de PDF que ocupa el alto de la pantalla
-    st.markdown('<iframe src="https://www.africau.edu/images/default/sample.pdf" width="100%" height="800vh" style="border-radius:10px;"></iframe>', unsafe_allow_html=True)
+    st.markdown('<iframe src="https://www.africau.edu/images/default/sample.pdf" width="100%" height="800px" style="border-radius:10px;"></iframe>', unsafe_allow_html=True)
 
 with col_ficha:
-    st.subheader("📝 Registro de Asiento")
-    
     with st.container(border=True):
-        # --- BLOQUE SUPERIOR: IDENTIFICACIÓN Y CATEGORÍA ---
-        st.markdown("##### 🏢 Identificación y Naturaleza")
-        r1_c1, r1_c2 = st.columns([2, 1])
-        r1_c1.text_input("PROVEEDOR / ACREEDOR", value="RESTAURANTE EL GRIEGO", key="prov")
-        # Atajo A3: 410+
-        r1_c2.text_input("CTA. TRÁFICO (410+)", value="410.00012", key="cta_traf")
-        
-        r2_c1, r2_c2, r2_c3 = st.columns([1, 1, 1])
-        r2_c1.selectbox("TIPO OPERACIÓN", ["Gasto Corriente", "Bienes de Inversión", "Suplido"])
-        r2_c2.text_input("CATEGORÍA GASTO", value="Representación / Comidas")
-        r2_c3.text_input("NIF", value="B12345678")
+        # --- BLOQUE 1: IDENTIFICACIÓN (ARRIBA) ---
+        st.markdown("### 🏢 Datos Identificativos")
+        id_c1, id_c2, id_c3 = st.columns([2, 1, 1])
+        prov = id_c1.text_input("PROVEEDOR", value="RESTAURANTE EL GRIEGO")
+        nif = id_c2.text_input("NIF", value="B12345678")
+        cta_traf = id_c3.text_input("CTA. TRÁFICO (410+)", value="410.00012")
 
         st.divider()
 
-        # --- BLOQUE CENTRAL: EL GASTO (Referencia arriba) ---
-        st.markdown("##### 📂 Imputación del Gasto")
-        r3_c1, r3_c2 = st.columns([1, 1])
-        r3_c1.text_input("CUENTA DE GASTO", value="629.00000")
-        r3_c2.text_input("Nº FACTURA / REFERENCIA", placeholder="Ej: FRA-2024-001")
+        # --- BLOQUE 2: NATURALEZA (CENTRO) ---
+        st.markdown("### ⚙️ Configuración del Gasto")
+        op_c1, op_c2, op_c3 = st.columns([1, 1, 1])
+        tipo_op = op_c1.selectbox("TIPO OPERACIÓN", ["Gasto Corriente", "Bien Inversión", "Suplido"])
+        cat_gasto = op_c2.text_input("CATEGORÍA", value="Comidas / Representación")
+        cta_gasto = op_c3.text_input("CTA. GASTO", value="629.00000")
 
         st.divider()
 
-        # --- BLOQUE INFERIOR: TOTALES (Total Abajo como disparador final) ---
-        st.markdown("##### 💰 Liquidación Económica")
+        # --- BLOQUE 3: CUADRE ECONÓMICO (IVA EDITABLE) ---
+        st.markdown("### 💰 Importes y Cuadre")
         
-        # Fila de Base e IVA (IVA en el medio)
-        base_col, iva_col, cuota_col = st.columns([1.2, 0.8, 1])
-        # Al meter el Total abajo, estos campos se recalculan
-        base_val = base_col.number_input("BASE IMPONIBLE", value=66.34, format="%.2f")
-        iva_perc = iva_col.selectbox("IVA (%)", [21, 10, 4, 0], index=1)
+        # Fila de Base e IVA
+        eco_c1, eco_c2, eco_c3 = st.columns([1.2, 0.8, 1])
+        base = eco_c1.number_input("BASE IMPONIBLE", value=66.34, format="%.2f")
+        iva_p = eco_c2.selectbox("IVA (%)", [21, 10, 4, 0], index=1)
         
-        cuota_calc = round(base_val * (iva_perc / 100), 2)
-        cuota_col.metric("CUOTA IVA", f"{cuota_calc} €")
+        # LA CUOTA EDITABLE (Para corregir el céntimo de Exact)
+        cuota_sugerida = round(base * (iva_p / 100), 2)
+        cuota_final = eco_c3.number_input("CUOTA IVA (Editable)", value=cuota_sugerida, format="%.2f", step=0.01)
 
-        # EL TOTAL ABAJO (Punto final antes de contabilizar)
-        st.write("###")
-        total_fra = st.number_input("💵 TOTAL FACTURA (€)", value=72.97, format="%.2f", 
-                                    help="Este es el valor final de cuadre.")
+        # Referencia y Total final
+        ref_c1, tot_c1 = st.columns([1, 1])
+        ref_c1.text_input("Nº FACTURA / REF", value="FRA-2024-001")
+        total_real = tot_c1.number_input("💵 TOTAL FACTURA (€)", value=72.97, format="%.2f")
 
-        # Verificador de Cuadre
-        dif = round(total_fra - (base_val + cuota_calc), 2)
-        if abs(dif) < 0.01:
+        # Verificador de cuadre con lógica de Suplidos
+        diferencia = round(total_real - (base + cuota_final), 2)
+        
+        if abs(diferencia) < 0.01:
             st.success("✅ ASIENTO CUADRADO")
         else:
-            st.error(f"⚠️ DESCUADRE: {dif} € (Revisa Bases o Suplidos)")
+            st.warning(f"⚠️ DIFERENCIA: {diferencia} € (Se llevará a Suplidos)")
+            st.text_input("CTA. SUPLIDOS", value="555.00000")
 
-    # BOTONES DE ACCIÓN
-    st.button("➕ Añadir Línea (IVA Mixto / Retención)", use_container_width=True)
-    
-    with st.form("finalizar"):
+    # BOTÓN DE ACCIÓN FINAL
+    with st.form("contabilizar"):
         if st.form_submit_button("🚀 CONTABILIZAR Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
             st.toast("Exportando a TSV compatible con A3...")
