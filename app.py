@@ -34,26 +34,45 @@ if menu == "🕹️ Control de Modelos":
         st.write("Historial de hoy:")
         st.code("09:30 - Lectura OK - Factura_FR_Almudena.pdf\n10:15 - Lectura OK - Factura_Nac_001.pdf")
 
-# --- 2. ENTRADA DE FACTURAS ---
+# --- 2. ENTRADA DE FACTURAS (CON FILTRO Y DRIVE) ---
 elif menu == "📄 Entrada de Facturas":
-    st.header("📄 Gestión de Facturas Entrantes")
+    st.header("📄 Gestión de Facturas")
     
-    # Subida
-    archivo = st.file_uploader("Subir nueva factura para procesar", type="pdf")
-    if archivo:
-        st.toast(f"Procesando {archivo.name}...")
+    # Simulación de conexión a Drive
+    st.sidebar.divider()
+    drive_status = st.sidebar.status("Conexión Drive: Activa ✅")
+    drive_status.write("Carpeta: /BunkerTax/Facturas_2024")
     
+    col_f1, col_f2 = st.columns([2, 1])
+    
+    with col_f1:
+        # EL BUSCADOR QUE PEDÍAS
+        cliente_buscado = st.text_input("🔍 Filtrar por nombre de cliente o NIF", "")
+        
+    with col_f2:
+        st.write("###")
+        if st.button("🔄 Sincronizar Drive"):
+            st.toast("Buscando nuevas facturas en Google Drive...")
+
+    # Datos simulados con más clientes
+    data = [
+        {"Fecha": "19/02", "Cliente": "Almudena", "Tipo": "Op. 03 Francia", "Importe": "1.250€", "Link": "Ver en Drive 📁"},
+        {"Fecha": "18/02", "Cliente": "Pedro", "Tipo": "Nacional", "Importe": "450€", "Link": "Ver en Drive 📁"},
+        {"Fecha": "17/02", "Cliente": "García S.L.", "Tipo": "Nacional", "Importe": "890€", "Link": "Ver en Drive 📁"},
+        {"Fecha": "16/02", "Cliente": "Almudena", "Tipo": "Op. 03 Francia", "Importe": "500€", "Link": "Ver en Drive 📁"}
+    ]
+    
+    df = pd.DataFrame(data)
+
+    # Lógica del filtro
+    if cliente_buscado:
+        df_filtrado = df[df['Cliente'].str.contains(cliente_buscado, case=False)]
+    else:
+        df_filtrado = df
+
     st.divider()
-    st.subheader("Bandeja de Entrada")
-    # Tabla simulada de SaaS
-    data = {
-        "Fecha": ["19/02", "18/02", "18/02"],
-        "Cliente": ["Almudena", "Pedro", "Almudena"],
-        "Tipo": ["Op. 03 Francia", "Nacional", "Op. 03 Francia"],
-        "Importe": ["1.250€", "450€", "3.100€"],
-        "Estado": ["✅ Procesado", "⏳ Pendiente", "✅ Procesado"]
-    }
-    st.dataframe(data, use_container_width=True)
+    st.subheader(f"Facturas en el Búnker ({len(df_filtrado)})")
+    st.dataframe(df_filtrado, use_container_width=True)
 
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
