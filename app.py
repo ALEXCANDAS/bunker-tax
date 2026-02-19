@@ -1,16 +1,10 @@
 import streamlit as st
+from datetime import date
 
-# 1. CONFIGURACIÓN DEL SaaS
-st.set_page_config(layout="wide", page_title="Búnker Pro | High-Speed SaaS")
+# 1. SETUP SaaS
+st.set_page_config(layout="wide", page_title="Búnker Pro | Sistema Integrado")
 
-# Lógica de puntos para Cuentas (TSV Ready)
-def format_cuenta(cta, software="A3"):
-    cta_limpia = cta.replace(".", "")
-    if software == "A3": # Ejemplo: 410.00012
-        return f"{cta_limpia[:3]}.{cta_limpia[3:]}"
-    return cta_limpia # Contasol suele preferir sin puntos o configurables
-
-# 2. MOTOR REACTIVO
+# Estado de la cola de facturas
 if 'total_f' not in st.session_state: st.session_state.total_f = 72.97
 if 'iva_p' not in st.session_state: st.session_state.iva_p = 10
 
@@ -24,56 +18,69 @@ if 'base_f' not in st.session_state: recalcular()
 col_pdf, col_ficha = st.columns([1.1, 1])
 
 with col_pdf:
-    st.markdown('<iframe src="https://www.africau.edu/images/default/sample.pdf" width="100%" height="800px" style="border-radius:10px; border: 1px solid #d1d5db;"></iframe>', unsafe_allow_html=True)
+    st.markdown("### 📄 Visor de Entrada Directa")
+    st.markdown('<iframe src="https://www.africau.edu/images/default/sample.pdf" width="100%" height="750px" style="border-radius:10px; border: 1px solid #d1d5db;"></iframe>', unsafe_allow_html=True)
 
 with col_ficha:
-    with st.container(border=True):
-        # BLOQUE 1: IDENTIFICACIÓN CON ICONO DINÁMICO
-        # Cambiamos el icono según la categoría
-        icono = "🍽️" if "Restaurante" in "Comidas" else "🏢"
-        st.markdown(f"### {icono} Datos del Proveedor")
+    # FORMULARIO MAESTRO (Para que el Enter funcione de verdad)
+    with st.form("contabilizacion_flash", clear_on_submit=True):
+        st.markdown("### 📝 Ficha de Validación Manual")
         
-        r1_c1, r1_c2, r1_c3 = st.columns([2, 1, 1])
-        prov = r1_c1.text_input("PROVEEDOR", value="RESTAURANTE EL GRIEGO")
-        nif = r1_c2.text_input("NIF", value="B12345678")
-        # Cuenta formateada para A3/Contasol
-        cta_t = r1_c3.text_input("CTA. TRÁFICO", value=format_cuenta("41000012"))
+        with st.container(border=True):
+            # FILA 0: FECHA Y REFERENCIA (Lo que faltaba)
+            c_f1, c_f2, c_f3 = st.columns([1, 1, 1])
+            fecha_fra = c_f1.date_input("FECHA FACTURA", value=date.today())
+            ref_fra = c_f2.text_input("Nº FACTURA", value="FRA-2024-001")
+            tipo_op = c_f3.selectbox("OPERACIÓN", ["Soportado Corriente", "Profesional (-15%)", "Bienes Inv."])
 
-        st.divider()
+            # FILA 1: IDENTIFICACIÓN
+            id_c1, id_c2, id_c3 = st.columns([2, 1, 1])
+            prov = id_c1.text_input("PROVEEDOR", value="RESTAURANTE EL GRIEGO")
+            nif = id_c2.text_input("NIF", value="B12345678")
+            cta_t = id_c3.text_input("CTA. TRÁFICO", value="410.00012")
 
-        # BLOQUE 2: OPERACIÓN (EL CENTRO)
-        st.markdown("### ⚙️ Naturaleza del Gasto")
-        r2_c1, r2_c2, r2_c3 = st.columns([1, 1, 1])
-        tipo_op = r2_c1.selectbox("TIPO OPERACIÓN", ["IVA Soportado", "Bienes Inversión", "Exento"])
-        cat_gasto = r2_c2.text_input("CAT. GASTO", value="Comidas")
-        cta_g = r2_c3.text_input("CTA. GASTO", value=format_cuenta("62900000"))
+            st.divider()
 
-        st.divider()
+            # FILA 2: GASTO
+            g_c1, g_c2 = st.columns([2, 1])
+            cat_gasto = g_c1.text_input("CATEGORÍA / CONCEPTO", value="Comidas y Representación")
+            cta_g = g_c2.text_input("CTA. GASTO", value="629.00000")
 
-        # BLOQUE 3: IMPORTES (REACTIVIDAD PURA)
-        st.markdown("### 💰 Importes")
-        
-        r3_c1, r3_c2, r3_c3 = st.columns([1.2, 0.8, 1])
-        
-        # IVA EN EL MEDIO (Eje del pensamiento)
-        r3_c2.selectbox("IVA (%)", [21, 10, 4, 0], key="iva_p", on_change=recalcular, index=1)
-        
-        # Base y Cuota reactivas
-        base_edit = r3_c1.number_input("BASE IMPONIBLE", key="base_f", format="%.2f")
-        cuota_edit = r3_c3.number_input("CUOTA IVA (Editable)", key="cuota_f", format="%.2f", step=0.01)
+            st.divider()
 
-        r4_c1, r4_c2 = st.columns([1, 1])
-        r4_c1.text_input("Nº FACTURA / REF", value="FRA-2024-001")
-        # El Total abajo como disparador
-        total_input = r4_c2.number_input("💵 TOTAL FACTURA (€)", key="total_f", on_change=recalcular, format="%.2f")
+            # FILA 3: IMPORTES (REACTIVOS)
+            st.markdown("#### 💰 Desglose Económico")
+            r3_c1, r3_c2, r3_c3 = st.columns([1.2, 0.8, 1])
+            
+            # Al ser un FORM, usamos keys para que el on_change se procese al final o con el botón
+            iva_p = r3_c2.selectbox("IVA (%)", [21, 10, 4, 0], index=1, key="iva_p_form")
+            base_f = r3_c1.number_input("BASE IMPONIBLE", value=st.session_state.base_f, format="%.2f")
+            cuota_f = r3_c3.number_input("CUOTA IVA (Editable)", value=st.session_state.cuota_f, format="%.2f")
 
-    # BOTONERA DE ACCIÓN
-    c_plus, c_save = st.columns([0.2, 4])
-    c_plus.button("➕") # Para bases mixtas
-    
-    with c_save:
-        with st.form("envio", clear_on_submit=True):
-            # El botón que Pedro pulsa con el ENTER
-            if st.form_submit_button("🚀 CONTABILIZAR ASIENTO (ENTER)", use_container_width=True, type="primary"):
-                # Aquí se genera el TSV ligero
-                st.toast("Asiento exportado al TSV. ¡Siguiente!")
+            # TOTAL FINAL
+            st.write("###")
+            total_input = st.number_input("💵 TOTAL FACTURA (€)", value=st.session_state.total_f, format="%.2f")
+
+        # BOTÓN "+" DINÁMICO (Simulado)
+        if st.form_submit_button("➕ AÑADIR LÍNEA (IVA MIXTO / RETENCIÓN)"):
+            st.info("Se habilitará una segunda fila de bases en la siguiente versión.")
+
+        # EL BOTÓN QUE DISPARA EL ENTER
+        if st.form_submit_button("🚀 CONTABILIZAR Y PASAR AL SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
+            # AQUÍ ES DONDE SE GUARDA EN EL TSV
+            st.success(f"Factura {ref_fra} contabilizada correctamente.")
+            # Lógica para cargar la siguiente factura de la carpeta...
+
+# --- SECCIÓN DE REGISTRO DE FACTURAS (EL LISTADO GENERAL) ---
+st.divider()
+st.subheader("📋 Registro General de Facturas (Entrada Automática)")
+st.caption("Aquí aparecen las facturas que la IA ya ha procesado desde Drive/TSV sin intervención manual.")
+
+# Simulación de la pantalla de registro
+data = {
+    "Fecha": ["01/02/2024", "02/02/2024", "03/02/2024"],
+    "Proveedor": ["Telefónica", "Amazon Business", "Gasolinera Cepsa"],
+    "Total": [54.20, 125.00, 60.00],
+    "Estado": ["✅ Auto", "✅ Auto", "⚠️ Pendiente Revisión"]
+}
+st.table(data)
