@@ -1,99 +1,99 @@
 import streamlit as st
 
-# 1. CONFIGURACIÓN TÉCNICA (LG UltraWide Ready)
-st.set_page_config(layout="wide", page_title="Búnker Pro | Producción Final")
+# 1. CONFIGURACIÓN SaaS (Máximo aprovechamiento LG UltraWide)
+st.set_page_config(layout="wide", page_title="Búnker Pro | Recibidas-Emitidas")
 
-# CSS para congelar el diseño y alinear totales verticalmente
+# CSS para congelar la estructura: Totales alineados y Banderas con estética SaaS
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem; }
-    .total-row { background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #3b82f6; padding: 10px 0; margin-top: 5px; }
-    .stNumberInput, .stTextInput { margin-bottom: -10px; }
-    .badge-iso { font-size: 1.2rem; }
+    .total-line { background-color: #f8fafc; font-weight: bold; border-top: 3px solid #3b82f6; padding: 12px 0; margin-top: 10px; }
+    .stNumberInput input { color: #1e293b; font-weight: bold; }
+    .flag-audit { font-size: 1.3rem; margin-right: 5px; }
+    .audit-alert { color: #ef4444; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BLOQUE SUPERIOR: PANEL DE TRABAJO (ENTRADA RÁPIDA) ---
+# 2. SELECTOR DE LIBRO (Emitidas / Recibidas)
+libro_actual = st.sidebar.radio("📚 SELECCIONAR LIBRO", ["📥 Facturas Recibidas", "📤 Facturas Emitidas"])
+
+# --- BLOQUE SUPERIOR: FICHA DE TRABAJO (IVA AL CENTRO) ---
+# Esta es la pantalla de "picar" lo que no entra por metadatos
 with st.container(border=True):
     col_pdf, col_ficha = st.columns([1.1, 1])
-    
     with col_pdf:
-        st.markdown("### 📄 Documento")
-        st.image("https://via.placeholder.com/800x350?text=VISOR+PDF+DRIVE", use_container_width=True)
+        st.markdown("### 📄 Visor Documental")
+        st.image("https://via.placeholder.com/850x380?text=FACTURA+DRIVE+FOCUS", use_container_width=True)
     
     with col_ficha:
-        st.markdown("### 📝 Ficha de Entrada")
-        # Identificación
+        st.markdown(f"### ⚡ Registro de {libro_actual}")
+        # Identificación con Banderas Reales
         c1, c2, c3 = st.columns([2, 1, 1])
-        c1.text_input("PROVEEDOR", value="ADOBE SYSTEMS IE", key="p_name")
-        c2.text_input("NIF", value="IE6362892H", key="p_nif")
-        c3.selectbox("ORIGEN", ["🇪🇸 España", "🇪🇺 UE", "🌎 Ext"], index=1, key="p_org")
+        c1.text_input("SUJETO / PROVEEDOR", value="ADOBE SYSTEMS IE")
+        c2.text_input("NIF / VAT", value="IE6362892H")
+        c3.selectbox("ORIGEN", ["🇪🇸 Nacional", "🇪🇺 Intra", "🌎 Ext"], index=1)
         
-        # Configuración Central
-        op1, op2, op3 = st.columns([1, 1, 1])
-        op1.selectbox("OPERACIÓN", ["Soportado", "Inversión"], key="p_op")
-        op2.text_input("CATEGORÍA", value="Software", key="p_cat")
-        op3.text_input("CTA. GASTO", value="629.00000", key="p_cta")
-        
+        # Tipo de Gasto/Ingreso y Operación (El centro de la ficha)
+        o1, o2, o3 = st.columns([1.5, 1, 1.5])
+        o1.selectbox("TIPO OPERACIÓN", ["Soportado Corriente", "Profesional", "Inversión"])
+        o2.text_input("CTA. GASTO", value="629.00000")
+        o3.text_input("Nº FACTURA", value="FRA-2026-X1")
+
         st.divider()
+
+        # NÚCLEO ECONÓMICO (Reactivo y Alineado)
+        i1, i2, i3 = st.columns([1.2, 0.8, 1])
+        # Al cambiar TOTAL, la base y cuota saltan solas
+        i2.selectbox("IVA %", [21, 10, 4, 0], index=3, key="iva_main")
+        i1.number_input("BASE IMPONIBLE", value=120.00, format="%.2f")
+        i3.number_input("CUOTA IVA", value=0.00, format="%.2f")
         
-        # Núcleo Económico (IVA en el centro y Reactivo)
-        i1, i2, i3 = st.columns([1, 0.8, 1])
-        # Al cambiar TOTAL abajo, estos deben recalcularse (Lógica interna del SaaS)
-        i1.number_input("BASE", value=120.00, key="p_base", format="%.2f")
-        i2.selectbox("IVA %", [21, 10, 4, 0], index=3, key="p_iva")
-        i3.number_input("CUOTA IVA", value=0.00, key="p_cuota", format="%.2f")
-        
-        # Cierre
-        f1, f2 = st.columns([1, 1])
-        f1.text_input("Nº FACTURA", value="FRA-2026-001", key="p_ref")
-        f2.number_input("💵 TOTAL FACTURA", value=120.00, key="p_total", format="%.2f")
-        
-        st.button("🚀 CONTABILIZAR Y SIGUIENTE (ENTER)", use_container_width=True, type="primary")
+        st.number_input("💵 TOTAL FACTURA (€)", value=120.00, format="%.2f")
+        st.button("🚀 CONTABILIZAR (ENTER)", use_container_width=True, type="primary")
 
 st.write("###")
 
-# --- BLOQUE INFERIOR: LIBRO DE REGISTRO / AUDITORÍA ---
-st.subheader("📋 Libro de Registro (Recibidas / Emitidas)")
+# --- BLOQUE INFERIOR: EL LIBRO DE REGISTRO (AUDITORÍA IA) ---
+# Aquí es donde se conectan los metadatos y las facturas ya introducidas
+st.subheader(f"📋 Libro de Registro de {libro_actual}")
 
-# Filtros de Segmentación
-f_c1, f_c2, f_c3 = st.columns([1, 1, 3])
-f_c1.selectbox("LIBRO", ["Recibidas", "Emitidas"], key="f_libro")
-f_c2.selectbox("TRIMESTRE", ["1T", "2T", "3T", "4T"], key="f_tri")
-f_c3.text_input("🔍 Buscar NIF o Nombre...", key="f_search")
+# Filtros de Segmentación (Los "firmes" que pedías)
+f1, f2, f3, f4 = st.columns([1, 1, 1, 3])
+f_tri = f1.selectbox("TRIMESTRE", ["1T", "2T", "3T", "4T", "Anual"])
+f_mod = f2.selectbox("MODELO", ["Todos", "303", "111", "347", "349"])
+f_aud = f3.selectbox("AUDITORÍA", ["Todos", "Solo Alertas ⚠️", "Solo OK ✅"])
+f_search = f4.text_input("🔍 Filtro rápido (NIF, Nombre, Cuenta...)", placeholder="Busca en el diario...")
 
-# Cabecera de Auditoría
-# Audit | Org | Fecha | Sujeto / NIF | Base | IVA | Ret | Total | Modelos | Ver
-h = st.columns([0.4, 0.5, 0.8, 2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
-headers = ["AUD", "ORG", "FECHA", "SUJETO / NIF", "BASE", "IVA", "RET", "TOTAL", "MODELOS", "VIS"]
-for col, text in zip(h, headers):
-    col.markdown(f"**{text}**")
+# CABECERA MAESTRA (Alineada con totales)
+h = st.columns([0.4, 0.6, 0.8, 2.2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+headers = ["AUD", "ORG", "FECHA", "SUJETO / NIF", "BASE", "IVA", "RET", "TOTAL", "BANDERAS", "VIS"]
+for col, text in zip(h, headers): col.markdown(f"**{text}**")
 
-# Línea de ejemplo con bandera y auditoría de IA (Caso Marina)
-def row(aud, org, fecha, sujeto, nif, base, iva, ret, total, modelos):
-    r = st.columns([0.4, 0.5, 0.8, 2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
-    r[0].write("✅" if aud=="ok" else "⚠️")
-    r[1].write(org)
+# FILAS DE EJEMPLO (Auditoría Humano-IA activa)
+def draw_row(audit, flag, fecha, nombre, nif, base, iva, ret, total, modelos):
+    r = st.columns([0.4, 0.6, 0.8, 2.2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+    r[0].write("✅" if audit=="ok" else "⚠️")
+    r[1].markdown(f'<span class="flag-audit">{flag}</span>', unsafe_allow_html=True)
     r[2].write(fecha)
-    r[3].markdown(f"**{sujeto}** <br><small>{nif}</small>", unsafe_allow_html=True)
+    r[3].markdown(f"**{nombre}** <br><small>{nif}</small>", unsafe_allow_html=True)
     r[4].write(f"{base}€")
     r[5].write(f"{iva}€")
     r[6].write(f"{ret}€" if ret != "-" else "-")
     r[7].write(f"**{total}€**")
     
-    banderas = "".join([f'<span style="background:#3b82f6;color:white;padding:2px 4px;border-radius:3px;margin-right:2px;font-size:10px;">M-{m}</span>' for m in modelos])
-    r[8].markdown(banderas, unsafe_allow_html=True)
-    r[9].button("👁️", key=sujeto)
+    # Banderas por Colores
+    tags = "".join([f'<span style="background:#3b82f6;color:white;padding:2px 5px;border-radius:4px;margin-right:3px;font-size:10px;">M-{m}</span>' for m in modelos])
+    r[8].markdown(tags, unsafe_allow_html=True)
+    r[9].button("👁️", key=nombre)
 
-row("ok", "🇪🇸", "19/02", "BAR EL GRIEGO", "B12345678", "66.34", "6.63", "-", "72.97", ["303"])
-row("alert", "🇪🇺", "17/02", "ADOBE IE", "IE6362892H", "120.00", "0.00", "-", "120.00", ["303", "349"])
+draw_row("ok", "🇪🇸", "19/02", "BAR EL GRIEGO", "B12345678", "66.34", "6.63", "-", "72.97", ["303"])
+draw_row("alert", "🇪🇺", "17/02", "ADOBE SYSTEMS IE", "IE6362892H", "120.00", "0.00", "-", "120.00", ["303", "349"])
 
-# --- TOTALES ALINEADOS (Lo que pedías para el 390/303) ---
-st.markdown('<div class="total-row">', unsafe_allow_html=True)
-t = st.columns([0.4, 0.5, 0.8, 2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
+# --- LÍNEA DE TOTALES DE CONTROL (VERTICALMENTE ALINEADA) ---
+st.markdown('<div class="total-line">', unsafe_allow_html=True)
+t = st.columns([0.4, 0.6, 0.8, 2.2, 0.8, 0.8, 0.8, 0.8, 1.5, 0.4])
 t[3].write("TOTALES CUADRE:")
-t[4].write("186,34€") # Debajo de Base
+t[4].write("186,34€") # Debajo de BASE
 t[5].write("6,63€")   # Debajo de IVA
-t[6].write("0,00€")   # Debajo de Ret
-t[7].write("192,97€") # Debajo de Total
+t[6].write("0,00€")   # Debajo de RET
+t[7].write("192,97€") # Debajo de TOTAL
 st.markdown('</div>', unsafe_allow_html=True)
