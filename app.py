@@ -41,11 +41,12 @@ with col_datos:
 
         # FILA 2: EL NÚCLEO (IVA en el centro, campos grandes)
         f1, f2, f3 = st.columns([1, 1, 1])
-        total = f1.number_input("💰 TOTAL FACTURA (€)", value=72.97, format="%.2f")
+        base_sugerida = round(total / (1 + (iva_perc/100)), 2)
+        
         # IVA Centralizado para no desvirtuar el pensamiento
         iva_perc = f2.selectbox("📊 IVA (%)", [21, 10, 4, 0], index=1)
         
-        base_sugerida = round(total / (1 + (iva_perc/100)), 2)
+       total = f1.number_input("💰 TOTAL FACTURA (€)", value=72.97, format="%.2f")
         cuota_sugerida = round(total - base_sugerida, 2)
         f3.metric("📈 CUOTA IVA", f"{cuota_sugerida} €")
 
