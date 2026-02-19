@@ -47,49 +47,45 @@ elif menu == "📄 Entrada de Facturas":
     st.header(f"📄 Libro de Registro: {empresa_actual}")
     from streamlit_sortables import sort_items
 
-    # 1. LA LISTA MAESTRA DE 28 CAMPOS
-    campos_contables = [
-        "ID_EMPRESA", "FECHA_APUNTE", "FECHA_FACTURA", "TRIMESTRE", "ID_FACTURA", 
-        "ID_CUENTA_CONTRA", "CUENTA_CONTRA", "TIPO_FACTURA", "NIF", "CATEGORIA", 
-        "ID_TERCERO", "CP_TERCERO", "BI1", "IVA1", "Cuota_IVA1", "BI2", "IVA2", 
-        "Cuota_IVA2", "BI3", "IVA3", "Cuota_IVA3", "RETENCION_%", "RETENCION_€", 
-        "TOTAL", "TIPO_OPERACION", "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE"
+    # 1. Definimos los 28 campos
+    todos_los_campos = [
+        "FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION", "TRIMESTRE",
+        "ID_EMPRESA", "FECHA_APUNTE", "ID_FACTURA", "ID_CUENTA_CONTRA", "TIPO_FACTURA",
+        "CATEGORIA", "ID_TERCERO", "CP_TERCERO", "BI1", "IVA1", "Cuota_IVA1", "BI2",
+        "IVA2", "Cuota_IVA2", "BI3", "IVA3", "Cuota_IVA3", "RETENCION_%", "RETENCION_€",
+        "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE"
     ]
 
-    # 2. SELECCIÓN DE CAMPOS (Filtro de lectura óptima)
-    st.subheader("🛠️ Configuración de Vista")
-    seleccionados = st.multiselect(
-        "1. Selecciona los campos que necesitas hoy:",
-        options=campos_contables,
-        default=["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION"]
-    )
+    st.subheader("🛠️ Configuración de Vista Única")
+    st.write("Arrastra a la izquierda las que quieras ver y a la derecha las que quieras ocultar:")
 
-    # 3. REORDENACIÓN DE CAMPOS (Fichas movibles)
-    if seleccionados:
-        st.write("2. Arrastra para ordenar las columnas a tu gusto:")
-        orden_final = sort_items(seleccionados, direction="horizontal")
-    else:
-        orden_final = []
-        st.warning("Selecciona al menos un campo arriba.")
+    # 2. EL COMPONENTE MÁGICO: Dos columnas arrastrables
+    # Izquierda: Lo que se ve | Derecha: Lo que se guarda
+    dict_fichas = {
+        "👁️ COLUMNAS VISIBLES (Ordenables)": ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL"],
+        "📁 CAMPOS OCULTOS": [c for c in todos_los_campos if c not in ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL"]]
+    }
 
-    # 4. DATOS (Simulación con los 28 campos para que no falte nada)
-    data_pro = {col: ["-" for _ in range(1)] for col in campos_contables}
+    # Esto crea dos cubos donde puedes mover fichas de uno a otro
+    resultado = sort_items(dict_fichas, direction="horizontal", multi_containers=True)
+    
+    columnas_a_mostrar = resultado["👁️ COLUMNAS VISIBLES (Ordenables)"]
+
+    # 3. Datos de prueba
+    data_pro = {col: ["-" for _ in range(1)] for col in todos_los_campos}
     data_pro["FECHA_FACTURA"][0] = "19/02/2026"
     data_pro["CUENTA_CONTRA"][0] = "ALMUDENA FR"
     data_pro["TOTAL"][0] = "1.250,00 €"
-    data_pro["TIPO_OPERACION"][0] = "03 FRANCIA"
     
-    df_completo = pd.DataFrame(data_pro)
+    df = pd.DataFrame(data_pro)
 
     st.divider()
 
-    # 5. VISUALIZACIÓN FINAL
-    if orden_final:
-        st.dataframe(df_completo[orden_final], use_container_width=True, hide_index=True)
-    
-    if st.button("🚀 Finalizar Configuración"):
-        st.balloons()
-
+    # 4. Mostrar solo lo que está en el cubo de "Visibles"
+    if columnas_a_mostrar:
+        st.dataframe(df[columnas_a_mostrar], use_container_width=True, hide_index=True)
+    else:
+        st.info("Arrastra alguna ficha al cubo de 'Visibles' para empezar.")
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
     st.header("📅 Calendario de Requerimientos")
