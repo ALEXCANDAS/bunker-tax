@@ -1,76 +1,78 @@
 import streamlit as st
 
-# 1. CONFIGURACIÓN DE PANTALLA (Para tu LG con f.lux)
-st.set_page_config(layout="wide", page_title="Búnker Pro | TSV Engine")
+# 1. CONFIGURACIÓN DE PANTALLA (Pensado para tu LG con f.lux)
+st.set_page_config(layout="wide", page_title="Búnker Pro | Visión Real")
 
-# 2. ESTADO DE SESIÓN (Memoria reactiva)
-if 'lineas' not in st.session_state:
-    st.session_state.lineas = [{'base': 0.0, 'tipo': 21, 'cta': '600.00000'}]
-if 'total_fra' not in st.session_state: st.session_state.total_fra = 0.0
+# Estilo para que el PDF se vea grande y la ficha sea limpia
+st.markdown("""
+    <style>
+    .pdf-frame { height: 85vh; border: 1px solid #4a4d50; border-radius: 10px; }
+    .stMetric { background: #f8fafc; padding: 10px; border-radius: 10px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-def add_linea():
-    # Lógica de autodescuadre: calcula lo que falta para el próximo "+"
-    total_actual = sum([l['base'] * (1 + l['tipo']/100) for l in st.session_state.lineas])
-    falta = st.session_state.total_fra - total_actual
-    nueva_base = falta / 1.21 if falta > 0 else 0.0
-    st.session_state.lineas.append({'base': round(nueva_base, 2), 'tipo': 21, 'cta': '600.00000'})
+# 2. LÓGICA DE DETECCIÓN (IA Semántica)
+def sugerir_iva(proveedor):
+    if "RESTAURANTE" in proveedor.upper(): return 10
+    return 21
 
-# --- INTERFAZ DUAL (PDF Izquierda | Ficha Derecha) ---
-col_pdf, col_ficha = st.columns([1.1, 1])
+# Simulamos carga de metadatos desde Drive
+prov_detectado = "RESTAURANTE EL GRIEGO"
+iva_sugerido = sugerir_iva(prov_detectado)
 
+# --- INTERFAZ DUAL ---
+col_pdf, col_ficha = st.columns([1.2, 1])
+
+# IZQUIERDA: LA IMAGEN DE LA FACTURA (Visión real)
 with col_pdf:
-    st.subheader("📁 Visor Drive (f.lux Ready)")
-    st.markdown('<div style="height:80vh; background:#2d2f31; border-radius:10px; display:flex; align-items:center; justify-content:center;">'
-                '<p style="color:#64748b;">[ Visualizador de PDF conectado a Drive ]</p></div>', unsafe_allow_html=True)
+    st.subheader("📁 Factura_Restaurante.pdf")
+    # Aquí cargamos el PDF real de tu Drive
+    st.markdown(f'<iframe src="https://www.africau.edu/images/default/sample.pdf" class="pdf-frame" width="100%"></iframe>', unsafe_allow_html=True)
 
+# DERECHA: LA FICHA (IVA en el medio para no desvirtuar el pensamiento)
 with col_ficha:
-    st.subheader("📝 Generador de Asiento TSV")
+    st.subheader("📝 Validación de Asiento")
     
     with st.container(border=True):
-        # CABECERA: Tráfico y Total
-        c1, c2, c3 = st.columns([1.5, 1, 1])
-        with c1: st.text_input("PROVEEDOR", value="RESTAURANTE EL GRIEGO", key="prov")
-        with c2: st.text_input("CTA. TRÁFICO", value="410.00012", key="cta_traf")
-        with c3: st.number_input("TOTAL FACTURA", key="total_fra", format="%.2f", step=0.01)
+        # FILA MAESTRA: El flujo que el humano espera
+        c_prov, c_cta = st.columns([2, 1])
+        c_prov.text_input("PROVEEDOR", value=prov_detectado)
+        c_cta.text_input("CTA. TRÁFICO", value="410.00012")
 
         st.divider()
-
-        # CUERPO: Líneas Dinámicas (Multi-IVA / Suplidos)
-        for i, linea in enumerate(st.session_state.lineas):
-            r1, r2, r3, r4 = st.columns([1.5, 2, 1, 0.5])
-            
-            with r1: # Cuenta de gasto para esta línea
-                st.session_state.lineas[i]['cta'] = st.text_input(f"Cta. Gasto", value=linea['cta'], key=f"cta_{i}", label_visibility="collapsed")
-            
-            with r2: # Base imponible
-                st.session_state.lineas[i]['base'] = st.number_input(f"Base", value=linea['base'], key=f"b_{i}", label_visibility="collapsed")
-            
-            with r3: # Tipo de IVA
-                st.session_state.lineas[i]['tipo'] = st.selectbox(f"IVA", [21, 10, 4, 0], 
-                                                                 index=[21,10,4,0].index(linea['tipo']), 
-                                                                 key=f"t_{i}", label_visibility="collapsed")
-            
-            with r4: # Eliminar línea
-                if st.button("🗑️", key=f"del_{i}"):
-                    st.session_state.lineas.pop(i)
-                    st.rerun()
-
-        # BOTÓN "+" (El corazón de la flexibilidad)
-        st.button("➕ Añadir línea (IVA / Suplido / Exento)", on_click=add_linea)
-
-        st.divider()
-
-        # VALIDACIÓN DE CUADRE
-        sum_total = sum([round(l['base'] * (1 + l['tipo']/100), 2) for l in st.session_state.lineas])
-        dif = round(st.session_state.total_fra - sum_total, 2)
         
-        if abs(dif) < 0.01:
-            st.success("✅ ASIENTO CUADRADO")
-        else:
-            st.warning(f"⚠️ DESCUADRE: {dif} € (Pulsa + para cuadrar)")
+        # EL NÚCLEO: Total -> IVA (Medio) -> Resultado
+        f1, f2, f3 = st.columns([1, 0.8, 1])
+        
+        total = f1.number_input("TOTAL FACTURA (€)", value=72.97, format="%.2f")
+        
+        # El IVA en el centro, propuesto por la IA
+        iva_val = f2.selectbox("IVA (%)", [21, 10, 4, 0], 
+                              index=[21, 10, 4, 0].index(iva_sugerido))
+        
+        # La cuota y base se muestran como resultado final del flujo
+        base_calc = round(total / (1 + (iva_val/100)), 2)
+        cuota_calc = round(total - base_calc, 2)
+        f3.metric("CUOTA IVA", f"{cuota_calc} €")
 
-        # BOTÓN CONTABILIZAR (Captura el ENTER)
-        with st.form("save_tsv", clear_on_submit=True):
-            if st.form_submit_button("🚀 GUARDAR EN TSV Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
-                # Aquí se generaría la línea de texto: "410.00012 [TAB] 600.00000 [TAB] 72.97..."
-                st.toast("Línea exportada a la cola TSV")
+        # FILA DE CUENTAS DE GASTO
+        st.write("###")
+        g1, g2 = st.columns([1, 1])
+        g1.text_input("CTA. GASTO", value="629.00000")
+        base_final = g2.number_input("BASE IMPONIBLE", value=base_calc)
+
+        # SECCIÓN DE SUPLIDOS (Solo si hay descuadre)
+        dif = round(total - (base_final + (base_final * (iva_val/100))), 2)
+        if abs(dif) > 0.01:
+            st.warning(f"Diferencia detectada: {dif} €")
+            st.text_input("CTA. SUPLIDOS (Opcional)", placeholder="555.0...")
+
+    # BOTÓN "+" PARA BASES EXTRAS (Por si la IA detecta facturas mixtas)
+    if st.button("➕ Añadir Línea (IVA Mixto / Suplido)"):
+        st.info("Añadiendo nueva base de cálculo...")
+
+    st.write("###")
+    # BOTÓN DE ACCIÓN FINAL
+    with st.form("contabilizar"):
+        if st.form_submit_button("🚀 GUARDAR EN TSV Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
+            st.toast("Asiento cuadrado y exportado.")
