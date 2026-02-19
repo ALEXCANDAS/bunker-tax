@@ -43,74 +43,44 @@ if menu == "🕹️ Control de Modelos":
         st.code("09:30 - Lectura OK - Factura_FR_Almudena.pdf\n10:15 - Lectura OK - Factura_Nac_001.pdf")
 
 # --- 2. ENTRADA DE FACTURAS (LIBRO DE REGISTRO CON FICHAS MOVIBLES) ---
+# --- 2. ENTRADA DE FACTURAS (LIBRO DE REGISTRO CON FICHAS MOVIBLES) ---
 elif menu == "📄 Entrada de Facturas":
     st.header(f"📄 Libro de Registro: {empresa_actual}")
+    
+    # Importamos la pieza de los requisitos
+    from streamlit_sortables import sort_items
 
-    # 1. EL DICCIONARIO DE LAS 28 COLUMNAS (La Base de Datos)
-    columnas_totales = [
-        "ID_EMPRESA", "FECHA_APUNTE", "FECHA_FACTURA", "TRIMESTRE", "ID_FACTURA", 
-        "ID_CUENTA_CONTRA", "CUENTA_CONTRA", "TIPO_FACTURA", "NIF", "CATEGORIA", 
-        "ID_TERCERO", "CP_TERCERO", "BI1", "IVA1", "Cuota_IVA1", "BI2", "IVA2", 
-        "Cuota_IVA2", "BI3", "IVA3", "Cuota_IVA3", "RETENCION_%", "RETENCION_€", 
-        "TOTAL", "TIPO_OPERACION", "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE"
+    st.subheader("🛠️ Configurador de Panel")
+    st.write("Arrastra las fichas para cambiar el orden de las columnas:")
+
+    # Lista de tus campos profesionales (puedes añadir los 28 aquí si quieres)
+    columnas_base = [
+        "FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL", 
+        "NIF", "TIPO_OPERACION", "TRIMESTRE"
     ]
 
-    # 2. EL FILTRO DE LECTURA ÓPTIMA
-    with st.expander("🛠️ CONFIGURAR VISTA ÓPTIMA (Selecciona qué columnas ver)", expanded=True):
-        col_btn1, col_btn2 = st.columns(2)
-        
-        # Botones rápidos para no tener que marcar una a una
-        if col_btn1.button("👁️ Ver Todo (28 campos)"):
-            st.session_state.columnas_ver = columnas_totales
-        if col_btn2.button("🧹 Vista Rápida (Esencial)"):
-            st.session_state.columnas_ver = ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION"]
+    # Las fichas movibles
+    orden_fichas = sort_items(columnas_base, direction="horizontal")
 
-        # El selector múltiple que controla la visibilidad
-        columnas_visibles = st.multiselect(
-            "Columnas activas:",
-            options=columnas_totales,
-            default=["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION"],
-            key="columnas_ver"
-        )
-
-    # 3. LÓGICA DE DATOS (Simulación con los 28 campos)
-    # Creamos una fila vacía con todos los campos para que la tabla no de error
-    data_pro = {col: ["-" for _ in range(1)] for col in columnas_totales}
-    # Rellenamos un ejemplo real
-    data_pro["FECHA_FACTURA"][0] = "19/02/2026"
-    data_pro["CUENTA_CONTRA"][0] = "ALMUDENA FR"
-    data_pro["NIF"][0] = "ESA12345678"
-    data_pro["TOTAL"][0] = "1.250,00 €"
-    data_pro["TIPO_OPERACION"][0] = "03 FRANCIA"
-    data_pro["BI1"][0] = "1.250,00 €"
-    data_pro["IVA1"][0] = "0%"
-
-    df_completo = pd.DataFrame(data_pro)
-
-    # 4. LA MÁGIA DE LA LECTURA ÓPTIMA
-    if columnas_visibles:
-        st.divider()
-        st.subheader("📊 Datos del Libro")
-        # Solo mostramos lo que has filtrado, pero el resto sigue existiendo por detrás
-        st.dataframe(df_completo[columnas_visibles], use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ Selecciona al menos una columna para visualizar el libro.")
-
-    st.caption(f"Filtro activo: {len(columnas_visibles)} de 28 columnas mostradas.")
-
-    # Datos de prueba
+    # Datos de prueba (Lógica de los 28 campos simplificada)
     data = [{
-        "FECHA_FACTURA": "15/02/2026", "CUENTA_CONTRA": "ALMUDENA FR", 
-        "TOTAL": 1210.00, "NIF": "ESA12345678", 
-        "TIPO_OPERACION": "03 FRANCIA", "TRIMESTRE": "1T"
+        "FECHA_FACTURA": "15/02/2026", 
+        "CUENTA_CONTRA": "ALMUDENA FR", 
+        "TOTAL": "1.210,00 €", 
+        "NIF": "ESA12345678", 
+        "TIPO_OPERACION": "03 FRANCIA", 
+        "TRIMESTRE": "1T"
     }]
+    
     df = pd.DataFrame(data)
 
     st.divider()
 
-    # La tabla se ordena sola según dejes las fichas arriba
-    st.dataframe(df[orden_fichas], use_container_width=True, hide_index=True)
-    # Tu botón de Drive para mañana
+    # La tabla se ordena según dejes las fichas arriba
+    if orden_fichas:
+        st.dataframe(df[orden_fichas], use_container_width=True, hide_index=True)
+    
+    # El botón de éxito (bien espaciado)
     if st.button("🚀 Finalizar Configuración"):
         st.balloons()
         st.success("¡Estructura de hoy guardada con éxito, Alejandro!")
