@@ -5,16 +5,24 @@ from datetime import datetime
 # Configuración Pro
 st.set_page_config(page_title="BUNKER TAX COMMAND", page_icon="🛡️", layout="wide")
 
-# --- BARRA LATERAL (EL MANDO A DISTANCIA) ---
+# --- BARRA LATERAL (SIEMPRE VISIBLE) ---
 with st.sidebar:
     st.title("🛡️ BÚNKER CONTROL")
+    st.divider()
+    
+    # 1. MOVEMOS AQUÍ LA EMPRESA PARA QUE NO DÉ ERROR
+    empresa_actual = st.selectbox(
+        "🏢 EMPRESA EN USO:",
+        ["001 - BÚNKER TAX S.L.", "002 - ALMUDENA FRANCIA", "003 - PEDRO GESTIÓN"]
+    )
+    
     st.divider()
     menu = st.radio(
         "NAVEGACIÓN",
         ["🕹️ Control de Modelos", "📄 Entrada de Facturas", "📅 Calendario Fiscal"]
     )
     st.divider()
-    st.success("Estado: Agente Online 🤖")
+    st.success(f"Conectado a: {empresa_actual.split(' - ')[1]}")
 
 # --- 1. PANEL DE CONTROL DE MODELOS ---
 if menu == "🕹️ Control de Modelos":
