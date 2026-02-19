@@ -1,72 +1,78 @@
 import streamlit as st
 
-# 1. SETUP DE PANTALLA
-st.set_page_config(layout="wide", page_title="Búnker Pro | Mecánica A3")
+# 1. SETUP
+st.set_page_config(layout="wide", page_title="Búnker Pro | IA Predictiva")
 
-# 2. INICIALIZACIÓN DE VALORES (Memoria instantánea)
+# 2. BASE DE DATOS DE PATRONES (Parametrización por Proveedor/Empresa)
+# Esto es lo que Gemini actualizará solo al detectar patrones
+if 'patrones' not in st.session_state:
+    st.session_state.patrones = {
+        "RESTAURANTE EL GRIEGO": {"iva_def": 10, "exento_frecuente": False},
+        "SUMINISTROS SL": {"iva_def": 21, "exento_frecuente": True},
+        "DESCONOCIDO": {"iva_def": 21, "exento_frecuente": False}
+    }
+
 if 'total_fac' not in st.session_state: st.session_state.total_fac = 0.0
-if 'base1' not in st.session_state: st.session_state.base1 = 0.0
-if 'iva1' not in st.session_state: st.session_state.iva1 = 21
 
-# --- FUNCIONES DE CÁLCULO (La lógica que corre por debajo) ---
-def actualizar_desde_total():
-    # Al meter el total, proponemos la Base 1 al IVA seleccionado
-    st.session_state.base1 = st.session_state.total_fac / (1 + (st.session_state.iva1 / 100))
+# --- LÓGICA DE PREDICCIÓN ---
+def calcular_propuesta():
+    proveedor = st.session_state.get('prov_actual', 'DESCONOCIDO')
+    config = st.session_state.patrones.get(proveedor, st.session_state.patrones["DESCONOCIDO"])
+    
+    # Asignamos el IVA según patrón
+    iva_prio = config["iva_def"]
+    st.session_state.iva1 = iva_prio
+    
+    # Calculamos base 1 por defecto
+    st.session_state.base1 = st.session_state.total_fac / (1 + (iva_prio / 100))
 
-# --- INTERFAZ DE ALTA VELOCIDAD ---
-st.title("🛡️ Mecánica de Registro Reactiva")
-st.caption("Escribe el TOTAL y pulsa TAB. La magia ocurre al instante.")
+# --- INTERFAZ REACTIVA ---
+st.title("🛡️ Registro con IA y Parametrización")
 
 with st.container(border=True):
-    # FILA PRINCIPAL: EL DISPARADOR
-    col_t, col_iva, col_vacia = st.columns([2, 1, 2])
+    c_prov, c_tot, c_iva_p = st.columns([2, 1, 1])
     
-    total_input = col_t.number_input(
-        "TOTAL FACTURA", 
-        value=st.session_state.total_fac, 
-        format="%.2f", 
-        key="total_fac", 
-        on_change=actualizar_desde_total
-    )
+    # Al cambiar el proveedor, la IA ya sabe qué IVA poner
+    proveedor = c_prov.selectbox("PROVEEDOR (IA Detect)", 
+                               options=list(st.session_state.patrones.keys()),
+                               key="prov_actual",
+                               on_change=calcular_propuesta)
     
-    tipo_iva1 = col_iva.selectbox(
-        "IVA Principal", 
-        [21, 10, 4, 0], 
-        key="iva1", 
-        on_change=actualizar_desde_total
-    )
+    total = c_tot.number_input("TOTAL FACTURA", 
+                             value=st.session_state.total_fac, 
+                             key="total_fac", 
+                             on_change=calcular_propuesta)
+    
+    iva_master = c_iva_p.selectbox("IVA Patrón", [21, 10, 4, 0], key="iva1", on_change=calcular_propuesta)
 
     st.divider()
 
-    # BLOQUE DE BASES REACTIVAS
-    # Fila 1: Calculada automáticamente al meter el total
-    c1, c2, c3 = st.columns([3, 1, 2])
-    b1 = c1.number_input("Base Imponible 1", value=st.session_state.base1, format="%.2f", key="b1_val")
-    cuota1 = b1 * (tipo_iva1 / 100)
-    c3.metric("Cuota 1", f"{cuota1:.2f} €")
+    # BLOQUE DE BASES DINÁMICAS
+    col_b1, col_met1 = st.columns([3, 2])
+    b1 = col_b1.number_input("Base Imponible 1", value=st.session_state.get('base1', 0.0), format="%.2f")
+    cuota1 = b1 * (iva_master / 100)
+    col_met1.metric("Cuota 1", f"{cuota1:.2f} €")
 
-    # Fila 2: El sobrante (Cálculo automático del resto)
-    sobrante = total_input - (b1 + cuota1)
+    # CÁLCULO DE DIFERENCIAS (Para Base 2 o Exento)
+    restante = total - (b1 + cuota1)
     
-    c4, c5, c6 = st.columns([3, 1, 2])
-    # Aquí la lógica: si hay sobrante, proponemos base al 10% (o lo que quieras)
-    b2 = c4.number_input("Base Imponible 2 (Sobrante)", value=sobrante / 1.10 if abs(sobrante) > 0.01 else 0.0, format="%.2f")
-    iva2 = c5.selectbox("% IVA 2", [21, 10, 4, 0], index=1)
+    col_b2, col_iva2, col_met2 = st.columns([3, 1, 2])
+    # Si queda dinero, la IA propone la siguiente base lógica (ej. al 4%)
+    b2 = col_b2.number_input("Base Imponible 2 (Sobrante)", value=restante/1.04 if restante > 0 else 0.0)
+    iva2 = col_iva2.selectbox("% IVA 2", [21, 10, 4, 0], index=2)
     cuota2 = b2 * (iva2 / 100)
-    c6.metric("Cuota 2", f"{cuota2:.2f} €")
+    col_met2.metric("Cuota 2", f"{cuota2:.2f} €")
 
-    # Fila Suplidos / Exentos (El cuadre final tipo Contasol)
-    sobrante_final = total_input - (b1 + cuota1 + b2 + cuota2)
+    # APARTADO EXENTO (Contasol Style)
+    restante_final = total - (b1 + cuota1 + b2 + cuota2)
+    col_ex, col_txt = st.columns([3, 3])
+    exento = col_ex.number_input("Suplidos / Exento", value=restante_final if restante_final > 0 else 0.0)
     
-    c7, c8, c9 = st.columns([3, 1, 2])
-    exento = c7.number_input("Suplidos / Tasas / Exento", value=sobrante_final if abs(sobrante_final) > 0.01 else 0.0, format="%.2f")
-    c8.write("📦 Sin IVA")
-    
-    # CUADRE DE SEGURIDAD
-    diff = total_input - (b1 + cuota1 + b2 + cuota2 + exento)
+    # CUADRE FINAL
+    diff = total - (b1 + cuota1 + b2 + cuota2 + exento)
     if abs(diff) < 0.01:
-        c9.success("✅ CUADRADO")
+        st.success("✅ ASIENTO CUADRADO")
     else:
-        c9.error(f"❌ DIF: {diff:.2f} €")
+        st.error(f"❌ DIFERENCIA: {diff:.2f} €")
 
-st.button("🚀 CONTABILIZAR Y SIGUIENTE (ENTER)", type="primary", use_container_width=True)
+st.button("🚀 CONTABILIZAR (ENTER)", type="primary", use_container_width=True)
