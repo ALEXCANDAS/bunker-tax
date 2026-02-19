@@ -45,43 +45,59 @@ if menu == "🕹️ Control de Modelos":
 # --- 2. ENTRADA DE FACTURAS ---
 
 elif menu == "📄 Entrada de Facturas":
-    st.header(f"📄 Libro de Registro: {empresa_actual}")
+    # --- CABECERA ESTILO SAAS ---
+    c_tit1, c_tit2 = st.columns([3, 1])
+    with c_tit1:
+        st.title("📄 Libro de Registro")
+        st.caption(f"Visualizando datos en tiempo real para: **{empresa_actual}**")
+    with c_tit2:
+        st.write("###")
+        st.button("🔄 Sincronizar Drive", use_container_width=True)
 
-    # 1. El Diccionario Maestro (Los 28 campos)
-    campos_contables = [
-        "FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION", "TRIMESTRE",
-        "ID_EMPRESA", "FECHA_APUNTE", "ID_FACTURA", "ID_CUENTA_CONTRA", "TIPO_FACTURA",
-        "CATEGORIA", "ID_TERCERO", "CP_TERCERO", "BI1", "IVA1", "Cuota_IVA1", "BI2",
-        "IVA2", "Cuota_IVA2", "BI3", "IVA3", "Cuota_IVA3", "RETENCION_%", "RETENCION_€",
-        "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE"
-    ]
+    # --- ZONA DE CONFIGURACIÓN (Ventanillas estilo Excel Pro) ---
+    with st.expander("🛠️ CONFIGURAR PANTALLA DE LECTURA", expanded=False):
+        # Aquí definimos la "matriz" de tus 28 campos de forma ultra-organizada
+        bloques = {
+            "IDENTIFICACIÓN": ["ID_FACTURA", "FECHA_FACTURA", "TRIMESTRE", "TIPO_OPERACION", "FECHA_APUNTE", "ID_EMPRESA"],
+            "TERCERO": ["NIF", "CUENTA_CONTRA", "ID_TERCERO", "CP_TERCERO", "ID_CUENTA_CONTRA", "CATEGORIA"],
+            "IMPORTES (B1)": ["BI1", "IVA1", "Cuota_IVA1", "TOTAL"],
+            "IMPORTES (B2/B3)": ["BI2", "IVA2", "Cuota_IVA2", "BI3", "IVA3", "Cuota_IVA3"],
+            "IMPUESTOS/OTROS": ["RETENCION_%", "RETENCION_€", "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE"]
+        }
+        
+        cols_ui = st.columns(len(bloques))
+        seleccion_final = []
 
-    # 2. El "Mando a Distancia" (Limpio y en un desplegable)
-    with st.expander("⚙️ CONFIGURAR VISTA DEL LIBRO"):
-        st.write("Selecciona y ordena las columnas que quieres ver:")
-        # Usamos el multiselect que ya conoces, que es el más estable y rápido
-        orden_columnas = st.multiselect(
-            "Columnas activas (puedes moverlas aquí mismo):",
-            options=campos_contables,
-            default=["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL"]
-        )
+        for i, (nombre_bloque, campos) in enumerate(bloques.items()):
+            with cols_ui[i]:
+                st.markdown(f"**{nombre_bloque}**")
+                for campo in campos:
+                    # Definimos cuáles vienen marcadas por defecto para no perder tiempo
+                    default_val = campo in ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TRIMESTRE"]
+                    if st.checkbox(campo, value=default_val, key=f"chk_{campo}"):
+                        seleccion_final.append(campo)
 
-    # 3. Lógica de Datos (Simulada)
-    data = [{col: "-" for col in campos_contables}]
-    data[0].update({"FECHA_FACTURA": "19/02/2026", "CUENTA_CONTRA": "ALMUDENA FR", "TOTAL": "1.250€", "NIF": "ESA1234"})
-    df = pd.DataFrame(data)
+    # --- MOTOR DE DATOS ---
+    # Simulamos la carga de tus 28 campos
+    data_saas = {col: ["---"] for col in seleccion_final}
+    if "TOTAL" in seleccion_final: data_saas["TOTAL"] = ["1.250,00 €"]
+    if "CUENTA_CONTRA" in seleccion_final: data_saas["CUENTA_CONTRA"] = ["ALMUDENA FR"]
+    
+    df_saas = pd.DataFrame(data_saas)
 
+    # --- EL LIBRO (Limpio y Profesional) ---
     st.divider()
-
-    # 4. LA TABLA (Lo que importa)
-    if orden_columnas:
-        st.dataframe(df[orden_columnas], use_container_width=True, hide_index=True)
+    if seleccion_final:
+        st.dataframe(
+            df_saas, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={col: st.column_config.TextColumn(col.replace("_", " ")) for col in seleccion_final}
+        )
     else:
-        st.info("Configura las columnas en el menú de arriba para ver los datos.")
+        st.info("Utiliza el configurador superior para activar las ventanillas de datos.")
 
-    # 5. Botón de éxito (con su espacio correcto)
-    if st.button("🚀 Guardar Configuración"):
-        st.balloons()
+    st.success(f"Vista optimizada con {len(seleccion_final)} campos activos.")
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
     st.header("📅 Calendario de Requerimientos")
