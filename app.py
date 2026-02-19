@@ -1,103 +1,86 @@
 import streamlit as st
 
-# 1. MOTOR DE REDONDEO Y CÁLCULO (Céntimos controlados)
+# 1. MOTOR REACTIVO (2 DECIMALES CLAVADOS)
 if 'base_val' not in st.session_state: st.session_state.base_val = 100.00
 if 'iva_perc' not in st.session_state: st.session_state.iva_perc = 21
-if 'cuota_val' not in st.session_state: st.session_state.cuota_val = 21.00
-if 'total_val' not in st.session_state: st.session_state.total_val = 121.00
 
-def recalcular_por_base():
-    # Redondeo forzado a 2 decimales para evitar colas de céntimos
+def recalcular():
     st.session_state.cuota_val = round(st.session_state.base_val * (st.session_state.iva_perc / 100), 2)
     st.session_state.total_val = round(st.session_state.base_val + st.session_state.cuota_val, 2)
 
-def recalcular_por_total():
-    st.session_state.base_val = round(st.session_state.total_val / (1 + (st.session_state.iva_perc / 100)), 2)
-    st.session_state.cuota_val = round(st.session_state.total_val - st.session_state.base_val, 2)
+if 'cuota_val' not in st.session_state: recalcular()
 
-# 2. INTERFAZ ULTRA-WIDE
-st.set_page_config(layout="wide", page_title="Búnker Pro | Asesoría Real")
-
+# 2. ESTILOS DE ICONOS PROFESIONALES
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem; }
-    .total-row { background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #3b82f6; padding: 12px 0; }
-    /* Estética de software de escritorio, no web aburrida */
-    input { font-family: 'Roboto Mono', monospace !important; font-weight: bold !important; }
+    .mod-303 { background-color: #01579b; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .mod-349 { background-color: #2e7d32; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .mod-111 { background-color: #e65100; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .flag-icon { font-size: 1.5rem; }
+    .total-line { background-color: #f1f5f9; font-weight: bold; border-top: 3px solid #3b82f6; padding: 10px 0; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- PANEL SUPERIOR: ACCIÓN ---
 with st.container(border=True):
     col_pdf, col_ficha = st.columns([1.2, 1])
-    
     with col_pdf:
-        # Visor blindado (Usando un contenedor con alto fijo para que no baile)
-        st.markdown('<div style="background:#334155; height:500px; border-radius:8px; overflow:hidden; border:2px solid #1e293b;">'
-                    '<iframe src="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" '
-                    'width="100%" height="100%" style="border:none;"></iframe>'
-                    '</div>', unsafe_allow_html=True)
+        st.markdown('<iframe src="https://www.africau.edu/images/default/sample.pdf" width="100%" height="450px" style="border:none; border-radius:8px;"></iframe>', unsafe_allow_html=True)
     
     with col_ficha:
-        st.markdown("### ⚡ Entrada Flash")
-        # Identificación (Icono grande al lado para auditoría visual)
+        st.markdown("### ⚡ Validación Rápida")
         c1, c2, c3 = st.columns([2, 1, 0.5])
         c1.text_input("PROVEEDOR", value="ADOBE SYSTEMS IE")
         c2.text_input("NIF", value="IE6362892H")
-        c3.markdown("## 🇪🇺") # Bandera para chequear 349 al vuelo
+        c3.markdown("## 🇪🇺") # Icono directo, sin letras
 
-        st.divider()
-
-        # Configuración de Cuentas
         o1, o2, o3 = st.columns([1, 1, 1])
         o1.selectbox("TIPO", ["IVA Soportado", "Inversión", "Profesional"])
-        o2.text_input("CTA. GASTO", value="629.00000")
-        o3.text_input("Nº FRA", value="2026-X1")
+        o2.text_input("CAT. GASTO", value="Software")
+        o3.text_input("CTA. GASTO", value="629.00000")
 
-        # NÚCLEO REACTIVO (IVA AL CENTRO)
+        st.divider()
         i1, i2, i3 = st.columns([1.2, 0.8, 1])
-        # Al salir de aquí con TAB, todo se redondea y recalcula
-        i1.number_input("BASE", key="base_val", on_change=recalcular_por_base, format="%.2f", step=0.01)
-        i2.selectbox("IVA %", [21, 10, 4, 0], key="iva_perc", on_change=recalcular_por_base, index=0)
-        i3.number_input("CUOTA", key="cuota_val", format="%.2f", step=0.01)
+        i1.number_input("BASE", key="base_val", on_change=recalcular, format="%.2f")
+        i2.selectbox("IVA %", [21, 10, 4, 0], key="iva_perc", on_change=recalcular, index=0)
+        i3.number_input("CUOTA", key="cuota_val", format="%.2f")
         
-        st.number_input("💵 TOTAL FACTURA (€)", key="total_val", on_change=recalcular_por_total, format="%.2f", step=0.01)
+        st.number_input("💵 TOTAL FACTURA (€)", key="total_val", format="%.2f")
+        st.button("🚀 CONTABILIZAR (ENTER)", use_container_width=True, type="primary")
 
-        if st.button("🚀 CONTABILIZAR (ENTER)", use_container_width=True, type="primary"):
-            st.toast("Contabilizado en ráfaga.")
-
-st.write("###")
-
-# --- PANEL INFERIOR: REGISTRO CON BANDERAS Y TOTALES ALINEADOS ---
+# --- PANEL INFERIOR: REGISTRO CON ICONOS NUMÉRICOS ---
 st.subheader("📋 Libro de Registro / Auditoría")
 
-# Cabecera alineada con la línea de totales
 h = st.columns([0.4, 0.6, 0.8, 2.2, 0.8, 0.8, 0.8, 1.5, 0.4])
-headers = ["AUD", "ORG", "FECHA", "SUJETO", "BASE", "IVA", "TOTAL", "BANDERAS", "VIS"]
+headers = ["AUD", "ORG", "FECHA", "SUJETO", "BASE", "IVA", "TOTAL", "MODELOS", "VIS"]
 for col, text in zip(h, headers): col.markdown(f"**{text}**")
 
-def fila(aud, flag, fecha, sujeto, base, iva, total, modelos):
+def fila_saas(aud, flag, fecha, sujeto, base, iva, total, modelos):
     r = st.columns([0.4, 0.6, 0.8, 2.2, 0.8, 0.8, 0.8, 1.5, 0.4])
     r[0].write("✅" if aud=="ok" else "⚠️")
-    r[1].markdown(f"### {flag}") # Bandera para detectar intracomunitarias "vagas"
+    r[1].markdown(f"### {flag}") # Bandera profesional 🇪🇸 / 🇪🇺
     r[2].write(fecha)
-    r[3].markdown(f"**{sujeto}**", unsafe_allow_html=True)
+    r[3].markdown(f"**{sujeto}**")
     r[4].write(f"{base:.2f}€")
     r[5].write(f"{iva:.2f}€")
     r[6].write(f"**{total:.2f}€**")
     
-    tags = "".join([f'<span style="background:#3b82f6;color:white;padding:2px 5px;border-radius:4px;margin-right:2px;font-size:10px;">M-{m}</span>' for m in modelos])
-    r[7].markdown(tags, unsafe_allow_html=True)
+    # Iconos con número de modelo (303, 349...)
+    m_html = ""
+    for m in modelos:
+        css_class = f"mod-{m}"
+        m_html += f'<span class="{css_class}">{m}</span> '
+    r[7].markdown(m_html, unsafe_allow_html=True)
     r[8].button("👁️", key=sujeto)
 
-fila("ok", "🇪🇺", "19/02", "ADOBE SYSTEMS", st.session_state.base_val, st.session_state.cuota_val, st.session_state.total_val, ["303", "349"])
-fila("ok", "🇪🇸", "18/02", "BAR EL GRIEGO", 66.34, 6.63, 72.97, ["303"])
+fila_saas("ok", "🇪🇺", "19/02", "ADOBE SYSTEMS", st.session_state.base_val, st.session_state.cuota_val, st.session_state.total_val, ["303", "349"])
+fila_saas("ok", "🇪🇸", "18/02", "BAR EL GRIEGO", 66.34, 6.63, 72.97, ["303"])
 
-# TOTALES VERTICALES (Debajo de cada columna)
-st.markdown('<div class="total-row">', unsafe_allow_html=True)
+# TOTALES VERTICALES
+st.markdown('<div class="total-line">', unsafe_allow_html=True)
 t = st.columns([0.4, 0.6, 0.8, 2.2, 0.8, 0.8, 0.8, 1.5, 0.4])
 t[3].write("TOTALES CUADRE:")
-t[4].write(f"{st.session_state.base_val + 66.34:.2f}€") # Debajo de BASE
-t[5].write(f"{st.session_state.cuota_val + 6.63:.2f}€") # Debajo de IVA
-t[6].write(f"{st.session_state.total_val + 72.97:.2f}€") # Debajo de TOTAL
+t[4].write(f"{st.session_state.base_val + 66.34:.2f}€")
+t[5].write(f"{st.session_state.cuota_val + 6.63:.2f}€")
+t[6].write(f"{st.session_state.total_val + 72.97:.2f}€")
 st.markdown('</div>', unsafe_allow_html=True)
