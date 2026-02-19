@@ -1,78 +1,65 @@
 import streamlit as st
 
-# 1. CONFIGURACIÓN DE PANTALLA (Pensado para tu LG con f.lux)
-st.set_page_config(layout="wide", page_title="Búnker Pro | Visión Real")
+# 1. CAROUSEL HORIZONTAL (Flechas Izquierda/Derecha)
+if 'idx_fra' not in st.session_state: st.session_state.idx_fra = 0
 
-# Estilo para que el PDF se vea grande y la ficha sea limpia
-st.markdown("""
-    <style>
-    .pdf-frame { height: 85vh; border: 1px solid #4a4d50; border-radius: 10px; }
-    .stMetric { background: #f8fafc; padding: 10px; border-radius: 10px; }
-    </style>
-    """, unsafe_allow_html=True)
+cola_facturas = [
+    {"img": "https://img_fragmento_1.png", "prov": "EL GRIEGO", "nif": "B123...", "sugerida": "410.00012"},
+    {"img": "https://img_fragmento_2.png", "prov": "NUEVO TALLER", "nif": "A999...", "sugerida": "410+"}
+]
 
-# 2. LÓGICA DE DETECCIÓN (IA Semántica)
-def sugerir_iva(proveedor):
-    if "RESTAURANTE" in proveedor.upper(): return 10
-    return 21
+def navegar(direccion):
+    if direccion == "next": st.session_state.idx_fra += 1
+    else: st.session_state.idx_fra -= 1
 
-# Simulamos carga de metadatos desde Drive
-prov_detectado = "RESTAURANTE EL GRIEGO"
-iva_sugerido = sugerir_iva(prov_detectado)
+# --- INTERFAZ COMPACTA ---
+st.title("🛡️ Búnker Pro | Validación Flash")
 
-# --- INTERFAZ DUAL ---
-col_pdf, col_ficha = st.columns([1.2, 1])
+# Navegación Superior (Flechas)
+c_prev, c_info, c_next = st.columns([1, 3, 1])
+if c_prev.button("⬅️ Anterior") and st.session_state.idx_fra > 0: navegar("prev")
+c_info.markdown(f"<h3 style='text-align: center;'>Factura {st.session_state.idx_fra + 1} de {len(cola_facturas)}</h3>", unsafe_allow_html=True)
+if c_next.button("Siguiente ➡️") and st.session_state.idx_fra < len(cola_facturas)-1: navegar("next")
 
-# IZQUIERDA: LA IMAGEN DE LA FACTURA (Visión real)
-with col_pdf:
-    st.subheader("📁 Factura_Restaurante.pdf")
-    # Aquí cargamos el PDF real de tu Drive
-    st.markdown(f'<iframe src="https://www.africau.edu/images/default/sample.pdf" class="pdf-frame" width="100%"></iframe>', unsafe_allow_html=True)
+col_img, col_ficha = st.columns([1, 1])
 
-# DERECHA: LA FICHA (IVA en el medio para no desvirtuar el pensamiento)
+# IZQUIERDA: Fragmento de imagen (Sin scroll)
+with col_img:
+    st.subheader("🖼️ Recorte Inteligente")
+    st.image("https://via.placeholder.com/500x300?text=Fragmento+Factura+Detectado", use_container_width=True)
+    st.caption("Gemini ha centrado la vista en el bloque de importes y NIF.")
+
+# DERECHA: Ficha Blanca con "Alta en Caliente"
 with col_ficha:
-    st.subheader("📝 Validación de Asiento")
+    f = cola_facturas[st.session_state.idx_fra]
     
     with st.container(border=True):
-        # FILA MAESTRA: El flujo que el humano espera
-        c_prov, c_cta = st.columns([2, 1])
-        c_prov.text_input("PROVEEDOR", value=prov_detectado)
-        c_cta.text_input("CTA. TRÁFICO", value="410.00012")
-
+        # El "Atajo A3" para crear cuentas
+        c_cta, c_nif = st.columns([1, 1])
+        # Si escribes 410+ aquí, el sistema dispara el alta automática
+        cta_input = c_cta.text_input("CTA. TRÁFICO (410+ para crear)", value=f['sugerida'])
+        
+        if "+" in cta_input:
+            st.warning(f"✨ Creando nueva cuenta para: {f['prov']}")
+            # Aquí la IA buscaría el último número de la serie en el TSV
+            cta_final = "410.00013" 
+            st.info(f"Sugerida: {cta_final}")
+        
         st.divider()
         
-        # EL NÚCLEO: Total -> IVA (Medio) -> Resultado
-        f1, f2, f3 = st.columns([1, 0.8, 1])
+        # TOTAL -> IVA (MEDIO) -> RESULTADO
+        t1, t2, t3 = st.columns([1, 0.8, 1])
+        total = t1.number_input("TOTAL (€)", value=72.97)
+        iva = t2.selectbox("IVA (%)", [21, 10, 4, 0], index=1)
         
-        total = f1.number_input("TOTAL FACTURA (€)", value=72.97, format="%.2f")
-        
-        # El IVA en el centro, propuesto por la IA
-        iva_val = f2.selectbox("IVA (%)", [21, 10, 4, 0], 
-                              index=[21, 10, 4, 0].index(iva_sugerido))
-        
-        # La cuota y base se muestran como resultado final del flujo
-        base_calc = round(total / (1 + (iva_val/100)), 2)
-        cuota_calc = round(total - base_calc, 2)
-        f3.metric("CUOTA IVA", f"{cuota_calc} €")
+        base_calc = total / (1 + (iva/100))
+        t3.metric("CUOTA IVA", f"{(total - base_calc):.2f} €")
 
-        # FILA DE CUENTAS DE GASTO
-        st.write("###")
-        g1, g2 = st.columns([1, 1])
-        g1.text_input("CTA. GASTO", value="629.00000")
-        base_final = g2.number_input("BASE IMPONIBLE", value=base_calc)
-
-        # SECCIÓN DE SUPLIDOS (Solo si hay descuadre)
-        dif = round(total - (base_final + (base_final * (iva_val/100))), 2)
-        if abs(dif) > 0.01:
-            st.warning(f"Diferencia detectada: {dif} €")
-            st.text_input("CTA. SUPLIDOS (Opcional)", placeholder="555.0...")
-
-    # BOTÓN "+" PARA BASES EXTRAS (Por si la IA detecta facturas mixtas)
-    if st.button("➕ Añadir Línea (IVA Mixto / Suplido)"):
-        st.info("Añadiendo nueva base de cálculo...")
-
-    st.write("###")
-    # BOTÓN DE ACCIÓN FINAL
-    with st.form("contabilizar"):
-        if st.form_submit_button("🚀 GUARDAR EN TSV Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
-            st.toast("Asiento cuadrado y exportado.")
+    # BOTÓN DE GUARDADO (Check & Vanish)
+    if st.button("🚀 CONTABILIZAR (ENTER)", type="primary", use_container_width=True):
+        st.balloons()
+        st.toast("Asiento guardado. La imagen desaparece...")
+        # Lógica para eliminar de la cola y pasar al siguiente automáticamente
+        if st.session_state.idx_fra < len(cola_facturas)-1:
+            st.session_state.idx_fra += 1
+            st.rerun()
