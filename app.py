@@ -43,47 +43,52 @@ if menu == "🕹️ Control de Modelos":
         st.code("09:30 - Lectura OK - Factura_FR_Almudena.pdf\n10:15 - Lectura OK - Factura_Nac_001.pdf")
 
 # --- 2. ENTRADA DE FACTURAS (LIBRO DE REGISTRO CON FICHAS MOVIBLES) ---
-# --- 2. ENTRADA DE FACTURAS (LIBRO DE REGISTRO CON FICHAS MOVIBLES) ---
 elif menu == "📄 Entrada de Facturas":
     st.header(f"📄 Libro de Registro: {empresa_actual}")
-    
-    # Importamos la pieza de los requisitos
     from streamlit_sortables import sort_items
 
-    st.subheader("🛠️ Configurador de Panel")
-    st.write("Arrastra las fichas para cambiar el orden de las columnas:")
-
-    # Lista de tus campos profesionales (puedes añadir los 28 aquí si quieres)
-    columnas_base = [
-        "FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL", 
-        "NIF", "TIPO_OPERACION", "TRIMESTRE"
+    # 1. LA LISTA MAESTRA DE 28 CAMPOS
+    campos_contables = [
+        "ID_EMPRESA", "FECHA_APUNTE", "FECHA_FACTURA", "TRIMESTRE", "ID_FACTURA", 
+        "ID_CUENTA_CONTRA", "CUENTA_CONTRA", "TIPO_FACTURA", "NIF", "CATEGORIA", 
+        "ID_TERCERO", "CP_TERCERO", "BI1", "IVA1", "Cuota_IVA1", "BI2", "IVA2", 
+        "Cuota_IVA2", "BI3", "IVA3", "Cuota_IVA3", "RETENCION_%", "RETENCION_€", 
+        "TOTAL", "TIPO_OPERACION", "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE"
     ]
 
-    # Las fichas movibles
-    orden_fichas = sort_items(columnas_base, direction="horizontal")
+    # 2. SELECCIÓN DE CAMPOS (Filtro de lectura óptima)
+    st.subheader("🛠️ Configuración de Vista")
+    seleccionados = st.multiselect(
+        "1. Selecciona los campos que necesitas hoy:",
+        options=campos_contables,
+        default=["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION"]
+    )
 
-    # Datos de prueba (Lógica de los 28 campos simplificada)
-    data = [{
-        "FECHA_FACTURA": "15/02/2026", 
-        "CUENTA_CONTRA": "ALMUDENA FR", 
-        "TOTAL": "1.210,00 €", 
-        "NIF": "ESA12345678", 
-        "TIPO_OPERACION": "03 FRANCIA", 
-        "TRIMESTRE": "1T"
-    }]
+    # 3. REORDENACIÓN DE CAMPOS (Fichas movibles)
+    if seleccionados:
+        st.write("2. Arrastra para ordenar las columnas a tu gusto:")
+        orden_final = sort_items(seleccionados, direction="horizontal")
+    else:
+        orden_final = []
+        st.warning("Selecciona al menos un campo arriba.")
+
+    # 4. DATOS (Simulación con los 28 campos para que no falte nada)
+    data_pro = {col: ["-" for _ in range(1)] for col in campos_contables}
+    data_pro["FECHA_FACTURA"][0] = "19/02/2026"
+    data_pro["CUENTA_CONTRA"][0] = "ALMUDENA FR"
+    data_pro["TOTAL"][0] = "1.250,00 €"
+    data_pro["TIPO_OPERACION"][0] = "03 FRANCIA"
     
-    df = pd.DataFrame(data)
+    df_completo = pd.DataFrame(data_pro)
 
     st.divider()
 
-    # La tabla se ordena según dejes las fichas arriba
-    if orden_fichas:
-        st.dataframe(df[orden_fichas], use_container_width=True, hide_index=True)
+    # 5. VISUALIZACIÓN FINAL
+    if orden_final:
+        st.dataframe(df_completo[orden_final], use_container_width=True, hide_index=True)
     
-    # El botón de éxito (bien espaciado)
     if st.button("🚀 Finalizar Configuración"):
         st.balloons()
-        st.success("¡Estructura de hoy guardada con éxito, Alejandro!")
 
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
