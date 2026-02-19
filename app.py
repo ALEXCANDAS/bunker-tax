@@ -1,79 +1,65 @@
 import streamlit as st
 
-# 1. SETUP PROFESIONAL
-st.set_page_config(layout="wide", page_title="Búnker Pro | Inteligencia de Gasto")
+# 1. MEMORIA REACTIVA (Para que los cálculos fluyan al momento)
+if 'total' not in st.session_state: st.session_state.total = 72.97
+if 'iva_perc' not in st.session_state: st.session_state.iva_perc = 10
 
-# 2. DICCIONARIO DE ACTIVIDADES (Lo que la IA alimenta y aprende)
-# Aquí configuramos qué cuenta y qué IVA suele usar cada tipo de negocio
-PATRONES_ACTIVIDAD = {
-    "RESTAURACION": {"iva": 10, "cta_gasto": "629.0", "deducible": True},
-    "TASAS_REGISTRO": {"iva": 0, "cta_gasto": "629.1", "deducible": False},
-    "COMBUSTIBLE": {"iva": 21, "cta_gasto": "628.0", "deducible": True},
-    "DEFAULT": {"iva": 21, "cta_gasto": "600.0", "deducible": True}
-}
+# Función de cálculo instantáneo
+def recalculate():
+    # Cuando cambia el total o el IVA, calculamos la base 1
+    st.session_state.base1 = round(st.session_state.total / (1 + (st.session_state.iva_perc / 100)), 2)
+    st.session_state.cuota1 = round(st.session_state.total - st.session_state.base1, 2)
 
-# 3. LÓGICA DE DETECCIÓN SEMÁNTICA
-def clasificar_proveedor(nombre):
-    n = nombre.upper()
-    if "RESTAURANTE" in n or "GRIEGO" in n: return "RESTAURACION"
-    if "REGISTRO" in n or "NOTARIA" in n: return "TASAS_REGISTRO"
-    if "REPSOL" in n or "CEPSA" in n: return "COMBUSTIBLE"
-    return "DEFAULT"
+# Ejecutamos el cálculo inicial si no existe
+if 'base1' not in st.session_state: recalculate()
 
-# --- INTERFAZ DE VALIDACIÓN ---
-st.title("🛡️ Validación de Gasto e IVA")
+# --- INTERFAZ ---
+st.title("🛡️ Búnker Speed-Entry")
+st.caption("Conexión total: Cambia el importe y mira cómo bailan las bases.")
 
-# Simulamos lectura de Gemini
-prov_detectado = "RESTAURANTE EL GRIEGO"
-actividad = clasificar_proveedor(prov_detectado)
-patron = PATRONES_ACTIVIDAD[actividad]
-
-with st.form("ficha_inteligente"):
-    # CABECERA: TOTAL Y PATRÓN
+with st.container(border=True):
+    # FILA MAESTRA (Conectada)
     c_nom, c_tot, c_iva = st.columns([2, 1, 1])
+    
     with c_nom:
-        st.text_input("PROVEEDOR", value=prov_detectado)
-        st.caption(f"📂 Actividad detectada: **{actividad}** (Cuenta {patron['cta_gasto']})")
+        st.text_input("PROVEEDOR", value="RESTAURANTE EL GRIEGO", key="prov")
     
     with c_tot:
-        total = st.number_input("TOTAL FACTURA (€)", value=72.97, format="%.2f")
+        # Al cambiar este número, se dispara 'recalculate'
+        st.number_input("TOTAL FACTURA", key="total", on_change=recalculate, format="%.2f")
     
     with c_iva:
-        # IVA configurable que viene pre-seteado por el patrón
-        iva_val = st.selectbox("IVA (%)", [21, 10, 4, 0], 
-                             index=[21, 10, 4, 0].index(patron['iva']))
+        # Al cambiar el IVA, también se dispara 'recalculate'
+        st.selectbox("IVA (%)", [21, 10, 4, 0], key="iva_perc", on_change=recalculate, index=1)
 
     st.divider()
 
-    # CUERPO: SEGMENTACIÓN DE LA BASE
-    col_base, col_cuota, col_tipo = st.columns([2, 1, 1])
+    # BLOQUE DE TRABAJO (Aquí ves el resultado al instante)
+    col_b, col_c, col_s = st.columns([2, 1, 1])
     
-    # Calculamos la base deducible
-    base_propuesta = total / (1 + (iva_val / 100))
+    # Base editable (por si quieres ajustarla manualmente)
+    base_final = col_b.number_input("BASE IMPONIBLE (Deducible)", key="base1", format="%.2f")
     
-    with col_base:
-        base_final = st.number_input("BASE IMPONIBLE (Deducible)", value=base_propuesta)
+    # Cuota calculada al vuelo sobre la base que haya en pantalla
+    cuota_final = round(base_final * (st.session_state.iva_perc / 100), 2)
+    col_c.metric("CUOTA IVA", f"{cuota_final:.2f} €")
     
-    with col_cuota:
-        cuota = base_final * (iva_val / 100)
-        st.metric("CUOTA IVA", f"{cuota:.2f} €")
-        
-    with col_tipo:
-        st.selectbox("TIPO GASTO", ["Deducible", "No Deducible", "Exento"], 
-                    index=0 if patron['deducible'] else 1)
-
-    # SECCIÓN DE SUPLIDOS (Lo que sobra para cuadrar)
-    st.write("###")
-    sobrante = total - (base_final + cuota)
+    # SUPLIDOS: La diferencia real para que cuadre el TOTAL
+    suplidos = round(st.session_state.total - (base_final + cuota_final), 2)
     
-    c_sup, c_info = st.columns([3, 1])
-    with c_sup:
-        suplidos = st.number_input("SUPLIDOS / GASTOS NO DEDUCIBLES", value=sobrante if abs(sobrante) > 0.01 else 0.0)
-    
-    with c_info:
-        if abs(total - (base_final + cuota + suplidos)) < 0.01:
+    with col_s:
+        if abs(suplidos) < 0.01:
             st.success("✅ CUADRADO")
         else:
-            st.error("❌ DIFERENCIA")
+            st.warning(f"Suplidos: {suplidos:.2f} €")
 
-    st.form_submit_button("🚀 CONTABILIZAR ASIENTO (ENTER)", use_container_width=True, type="primary")
+    st.write("###")
+    
+    # TRUCO PARA EL INTRO: 
+    # En Streamlit, un botón fuera de un form no captura el Enter de texto, 
+    # pero podemos usar un pequeño 'formulario de una sola línea' para el envío final.
+    with st.form("envio", clear_on_submit=True):
+        st.caption("Pulsa ENTER aquí para contabilizar")
+        if st.form_submit_button("🚀 CONTABILIZAR ASIENTO", use_container_width=True, type="primary"):
+            st.toast("Guardado en el .dat")
+            # Aquí pondrías la lógica para cargar la siguiente factura de Drive
