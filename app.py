@@ -1,87 +1,76 @@
 import streamlit as st
-import pandas as pd
 
-# 1. SETUP DE PANTALLA (Pensado para tu LG partido)
-st.set_page_config(layout="wide", page_title="Búnker Pro | Drive Link")
+# 1. CONFIGURACIÓN DE PANTALLA (Para tu LG con f.lux)
+st.set_page_config(layout="wide", page_title="Búnker Pro | TSV Engine")
 
-# Estética oscura/suave (para que combine con tu f.lux)
-st.markdown("""
-    <style>
-    .main { background-color: #1a1c1e; color: #e2e8f0; }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input {
-        background-color: #2d2f31; color: white; border: 1px solid #4a4d50;
-    }
-    .pdf-container {
-        height: 85vh; border: 2px solid #3e4246; border-radius: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. ESTADO DE SESIÓN (Memoria reactiva)
+if 'lineas' not in st.session_state:
+    st.session_state.lineas = [{'base': 0.0, 'tipo': 21, 'cta': '600.00000'}]
+if 'total_fra' not in st.session_state: st.session_state.total_fra = 0.0
 
-# 2. CONEXIÓN DRIVE (Simulada con ID de archivos)
-# Mañana usaremos st.connection("google_drive") para leer tu carpeta real
-if 'cola_drive' not in st.session_state:
-    st.session_state.cola_drive = [
-        {"id": "DOC_001", "nombre": "Factura_Restaurante.pdf", "drive_url": "https://www.africau.edu/images/default/sample.pdf", "status": "Pendiente"},
-        {"id": "DOC_002", "nombre": "Compra_Mercaderias.pdf", "drive_url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", "status": "Revisar"},
-    ]
-if 'idx' not in st.session_state: st.session_state.idx = 0
+def add_linea():
+    # Lógica de autodescuadre: calcula lo que falta para el próximo "+"
+    total_actual = sum([l['base'] * (1 + l['tipo']/100) for l in st.session_state.lineas])
+    falta = st.session_state.total_fra - total_actual
+    nueva_base = falta / 1.21 if falta > 0 else 0.0
+    st.session_state.lineas.append({'base': round(nueva_base, 2), 'tipo': 21, 'cta': '600.00000'})
 
-# --- INTERFAZ DUAL (Aprovechando el LG) ---
-col_archivo, col_ficha = st.columns([1.2, 1])
+# --- INTERFAZ DUAL (PDF Izquierda | Ficha Derecha) ---
+col_pdf, col_ficha = st.columns([1.1, 1])
 
-# IZQUIERDA: VISOR DE DRIVE (El PDF que Pedro tiene que validar)
-with col_archivo:
-    factura_actual = st.session_state.cola_drive[st.session_state.idx]
-    st.subheader(f"📄 {factura_actual['nombre']}")
-    
-    # Visor de PDF integrado
-    st.markdown(f"""
-        <iframe src="{factura_actual['drive_url']}" class="pdf-container" width="100%"></iframe>
-    """, unsafe_allow_html=True)
+with col_pdf:
+    st.subheader("📁 Visor Drive (f.lux Ready)")
+    st.markdown('<div style="height:80vh; background:#2d2f31; border-radius:10px; display:flex; align-items:center; justify-content:center;">'
+                '<p style="color:#64748b;">[ Visualizador de PDF conectado a Drive ]</p></div>', unsafe_allow_html=True)
 
-# DERECHA: FICHA BLANCA (Mecánica A3 Reactiva)
 with col_ficha:
-    st.subheader("📝 Validación del Asiento")
+    st.subheader("📝 Generador de Asiento TSV")
     
-    # Lógica de cálculo al vuelo (lo que ya nos gusta)
     with st.container(border=True):
-        # Datos Tráfico
-        c1, c2 = st.columns([2, 1])
-        prov = c1.text_input("PROVEEDOR (IA)", value="RESTAURANTE EL GRIEGO")
-        cta_prov = c2.text_input("CTA. 400/410", value="410.00012")
-        
-        # El Total es el disparador
-        total = st.number_input("TOTAL FACTURA", value=72.97, format="%.2f")
-        iva_tipo = st.selectbox("IVA (%)", [21, 10, 4, 0], index=1) # 10% por defecto si es Restaurante
-        
+        # CABECERA: Tráfico y Total
+        c1, c2, c3 = st.columns([1.5, 1, 1])
+        with c1: st.text_input("PROVEEDOR", value="RESTAURANTE EL GRIEGO", key="prov")
+        with c2: st.text_input("CTA. TRÁFICO", value="410.00012", key="cta_traf")
+        with c3: st.number_input("TOTAL FACTURA", key="total_fra", format="%.2f", step=0.01)
+
         st.divider()
-        
-        # Cálculos automáticos
-        base_calc = round(total / (1 + (iva_tipo / 100)), 2)
-        cuota_calc = round(total - base_calc, 2)
-        
-        # Datos Gasto
-        cg1, cg2 = st.columns([1, 1])
-        cta_gasto = cg1.text_input("CTA. GASTO", value="629.00000")
-        base_edit = cg2.number_input("BASE IMPONIBLE", value=base_calc)
-        
-        st.metric("CUOTA IVA", f"{cuota_calc} €")
-        
-        # Suplidos automáticos si no cuadra
-        suplido = round(total - (base_edit + (base_edit * (iva_tipo/100))), 2)
-        if abs(suplido) > 0.01:
-            st.warning(f"Suplido/Diferencia: {suplido} €")
-            cta_sup = st.text_input("CTA. SUPLIDOS", placeholder="555.0...")
 
-        # BOTÓN ENTER
-        st.write("###")
-        if st.button("🚀 CONTABILIZAR Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
-            if st.session_state.idx < len(st.session_state.cola_drive) - 1:
-                st.session_state.idx += 1
-                st.rerun()
-            else:
-                st.success("¡Carpeta terminada!")
+        # CUERPO: Líneas Dinámicas (Multi-IVA / Suplidos)
+        for i, linea in enumerate(st.session_state.lineas):
+            r1, r2, r3, r4 = st.columns([1.5, 2, 1, 0.5])
+            
+            with r1: # Cuenta de gasto para esta línea
+                st.session_state.lineas[i]['cta'] = st.text_input(f"Cta. Gasto", value=linea['cta'], key=f"cta_{i}", label_visibility="collapsed")
+            
+            with r2: # Base imponible
+                st.session_state.lineas[i]['base'] = st.number_input(f"Base", value=linea['base'], key=f"b_{i}", label_visibility="collapsed")
+            
+            with r3: # Tipo de IVA
+                st.session_state.lineas[i]['tipo'] = st.selectbox(f"IVA", [21, 10, 4, 0], 
+                                                                 index=[21,10,4,0].index(linea['tipo']), 
+                                                                 key=f"t_{i}", label_visibility="collapsed")
+            
+            with r4: # Eliminar línea
+                if st.button("🗑️", key=f"del_{i}"):
+                    st.session_state.lineas.pop(i)
+                    st.rerun()
 
-# NAVEGADOR DE COLA (Abajo para no estorbar el flujo horizontal)
-st.divider()
-st.caption("Ficha Blanca v2.4 | LG OnScreen Optimized | f.lux Friendly")
+        # BOTÓN "+" (El corazón de la flexibilidad)
+        st.button("➕ Añadir línea (IVA / Suplido / Exento)", on_click=add_linea)
+
+        st.divider()
+
+        # VALIDACIÓN DE CUADRE
+        sum_total = sum([round(l['base'] * (1 + l['tipo']/100), 2) for l in st.session_state.lineas])
+        dif = round(st.session_state.total_fra - sum_total, 2)
+        
+        if abs(dif) < 0.01:
+            st.success("✅ ASIENTO CUADRADO")
+        else:
+            st.warning(f"⚠️ DESCUADRE: {dif} € (Pulsa + para cuadrar)")
+
+        # BOTÓN CONTABILIZAR (Captura el ENTER)
+        with st.form("save_tsv", clear_on_submit=True):
+            if st.form_submit_button("🚀 GUARDAR EN TSV Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
+                # Aquí se generaría la línea de texto: "410.00012 [TAB] 600.00000 [TAB] 72.97..."
+                st.toast("Línea exportada a la cola TSV")
