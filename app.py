@@ -1,78 +1,83 @@
 import streamlit as st
 
-# 1. SETUP
-st.set_page_config(layout="wide", page_title="Búnker Pro | IA Predictiva")
+# 1. SETUP DE ALTA VELOCIDAD
+st.set_page_config(layout="wide", page_title="Búnker Pro | IA Semántica")
 
-# 2. BASE DE DATOS DE PATRONES (Parametrización por Proveedor/Empresa)
-# Esto es lo que Gemini actualizará solo al detectar patrones
-if 'patrones' not in st.session_state:
-    st.session_state.patrones = {
-        "RESTAURANTE EL GRIEGO": {"iva_def": 10, "exento_frecuente": False},
-        "SUMINISTROS SL": {"iva_def": 21, "exento_frecuente": True},
-        "DESCONOCIDO": {"iva_def": 21, "exento_frecuente": False}
-    }
+# 2. MOTOR DE INTELIGENCIA SEMÁNTICA (Simulando a Gemini)
+def detectar_patron_por_nombre(nombre):
+    nombre = nombre.upper()
+    if "RESTAURANTE" in nombre or "MESON" in nombre or "GASTRO" in nombre:
+        return 10
+    if "HOTEL" in nombre or "HOSTAL" in nombre:
+        return 10
+    if "GASOLINA" in nombre or "REPSOL" in nombre:
+        return 21
+    return 21 # Por defecto España
 
-if 'total_fac' not in st.session_state: st.session_state.total_fac = 0.0
+# 3. ESTADO DE SESIÓN
+if 'empresa_lectura' not in st.session_state:
+    st.session_state.empresa_lectura = "RESTAURANTE EL GRIEGO S.L."
 
-# --- LÓGICA DE PREDICCIÓN ---
-def calcular_propuesta():
-    proveedor = st.session_state.get('prov_actual', 'DESCONOCIDO')
-    config = st.session_state.patrones.get(proveedor, st.session_state.patrones["DESCONOCIDO"])
-    
-    # Asignamos el IVA según patrón
-    iva_prio = config["iva_def"]
-    st.session_state.iva1 = iva_prio
-    
-    # Calculamos base 1 por defecto
-    st.session_state.base1 = st.session_state.total_fac / (1 + (iva_prio / 100))
+# --- INTERFAZ ---
+st.title("🛡️ Validación Inteligente")
 
-# --- INTERFAZ REACTIVA ---
-st.title("🛡️ Registro con IA y Parametrización")
+# Simulamos que la IA "lee" el nombre y ajusta el patrón
+iva_sugerido = detectar_patron_por_nombre(st.session_state.empresa_lectura)
 
-with st.container(border=True):
-    c_prov, c_tot, c_iva_p = st.columns([2, 1, 1])
+# FORMULARIO PARA CAPTURAR EL ENTER
+with st.form("asiento_flash", clear_on_submit=True):
     
-    # Al cambiar el proveedor, la IA ya sabe qué IVA poner
-    proveedor = c_prov.selectbox("PROVEEDOR (IA Detect)", 
-                               options=list(st.session_state.patrones.keys()),
-                               key="prov_actual",
-                               on_change=calcular_propuesta)
+    # FILA DE CABECERA (El "Golpe de Ojo")
+    c_nom, c_tot, c_iva = st.columns([2, 1, 1])
     
-    total = c_tot.number_input("TOTAL FACTURA", 
-                             value=st.session_state.total_fac, 
-                             key="total_fac", 
-                             on_change=calcular_propuesta)
+    with c_nom:
+        nombre = st.text_input("📝 PROVEEDOR DETECTADO", value=st.session_state.empresa_lectura)
     
-    iva_master = c_iva_p.selectbox("IVA Patrón", [21, 10, 4, 0], key="iva1", on_change=calcular_propuesta)
+    with c_tot:
+        # El foco del asesor empieza aquí
+        total = st.number_input("TOTAL FACTURA (€)", value=121.00, format="%.2f")
+    
+    with c_iva:
+        # El IVA se auto-selecciona por el nombre del proveedor
+        iva_prio = st.selectbox("IVA PATRÓN (%)", [21, 10, 4, 0], 
+                               index=[21, 10, 4, 0].index(iva_sugerido),
+                               help="IA detectó Restaurante -> Sugiere 10%")
 
     st.divider()
 
-    # BLOQUE DE BASES DINÁMICAS
-    col_b1, col_met1 = st.columns([3, 2])
-    b1 = col_b1.number_input("Base Imponible 1", value=st.session_state.get('base1', 0.0), format="%.2f")
-    cuota1 = b1 * (iva_master / 100)
-    col_met1.metric("Cuota 1", f"{cuota1:.2f} €")
+    # BLOQUE DE TRABAJO (Autocalculado)
+    bi1 = total / (1 + (iva_prio / 100))
+    cuota1 = total - bi1
 
-    # CÁLCULO DE DIFERENCIAS (Para Base 2 o Exento)
-    restante = total - (b1 + cuota1)
+    col_bi, col_cuota, col_check = st.columns([2, 2, 1])
     
-    col_b2, col_iva2, col_met2 = st.columns([3, 1, 2])
-    # Si queda dinero, la IA propone la siguiente base lógica (ej. al 4%)
-    b2 = col_b2.number_input("Base Imponible 2 (Sobrante)", value=restante/1.04 if restante > 0 else 0.0)
-    iva2 = col_iva2.selectbox("% IVA 2", [21, 10, 4, 0], index=2)
-    cuota2 = b2 * (iva2 / 100)
-    col_met2.metric("Cuota 2", f"{cuota2:.2f} €")
-
-    # APARTADO EXENTO (Contasol Style)
-    restante_final = total - (b1 + cuota1 + b2 + cuota2)
-    col_ex, col_txt = st.columns([3, 3])
-    exento = col_ex.number_input("Suplidos / Exento", value=restante_final if restante_final > 0 else 0.0)
+    with col_bi:
+        base_final = st.number_input("BASE IMPONIBLE 1", value=bi1, format="%.2f")
     
-    # CUADRE FINAL
-    diff = total - (b1 + cuota1 + b2 + cuota2 + exento)
-    if abs(diff) < 0.01:
-        st.success("✅ ASIENTO CUADRADO")
-    else:
-        st.error(f"❌ DIFERENCIA: {diff:.2f} €")
+    with col_cuota:
+        st.metric("CUOTA IVA", f"{(base_final * (iva_prio/100)):.2f} €")
 
-st.button("🚀 CONTABILIZAR (ENTER)", type="primary", use_container_width=True)
+    # APARTADO EXENTO / OTROS (Para cuadrar al céntimo)
+    st.write("###")
+    sobrante = total - (base_final * (1 + iva_prio/100))
+    
+    col_ex, col_status = st.columns([3, 1])
+    with col_ex:
+        exento = st.number_input("SUPLIDOS / TASAS / EXENTO", value=sobrante if abs(sobrante) > 0.01 else 0.0)
+    
+    with col_status:
+        # Verificación visual de cuadre
+        if abs(total - (base_final + (base_final*(iva_prio/100)) + exento)) < 0.01:
+            st.success("✅ CUADRADO")
+        else:
+            st.error("❌ DIFERENCIA")
+
+    st.write("###")
+    # BOTÓN QUE CAPTURA EL ENTER
+    enviar = st.form_submit_button("🚀 CONTABILIZAR Y SIGUIENTE (PULSA ENTER)", 
+                                 type="primary", 
+                                 use_container_width=True)
+
+    if enviar:
+        st.toast("Asiento enviado al .dat con éxito")
+        # Aquí saltaríamos a la siguiente factura
