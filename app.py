@@ -1,78 +1,78 @@
 import streamlit as st
 
-# 1. FORZAR ANCHO COMPLETO Y ELIMINAR MÁRGENES
-st.set_page_config(layout="wide", page_title="Búnker Pro | UltraWide Mode")
+# 1. CONFIGURACIÓN ULTRA-WIDE
+st.set_page_config(layout="wide", page_title="Búnker Pro | Flujo Optimizado")
 
+# Estilos para eliminar márgenes y mejorar la densidad visual
 st.markdown("""
     <style>
-    /* Eliminar el padding excesivo de Streamlit */
-    .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
-    /* Hacer que los contenedores ocupen todo el espacio */
-    [data-testid="stVerticalBlock"] > div:has(div.stFrame) { width: 100% !important; }
-    .stMetric { background: #f1f5f9; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+    .stMetric { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    div[data-testid="column"] { padding: 0px 5px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. ESTRUCTURA DE PANTALLA DUAL (50/50 Real)
-col_pdf, col_datos = st.columns([1, 1], gap="small")
+# 2. INTERFAZ DUAL (PDF Izquierda | Ficha Derecha)
+col_pdf, col_ficha = st.columns([1.2, 1])
 
-# --- COLUMNA IZQUIERDA: EL DOCUMENTO (Sin espacios muertos) ---
 with col_pdf:
-    st.markdown("### 📄 Documento Fuente (Drive)")
-    # El visor de PDF ahora ocupa todo el alto disponible
-    st.markdown("""
-        <iframe src="https://www.africau.edu/images/default/sample.pdf" 
-        width="100%" height="850px" style="border:1px solid #ccc; border-radius:8px;"></iframe>
-    """, unsafe_allow_html=True)
+    st.subheader("📄 Documento Fuente")
+    # Visor de PDF que ocupa el alto de la pantalla
+    st.markdown('<iframe src="https://www.africau.edu/images/default/sample.pdf" width="100%" height="800vh" style="border-radius:10px;"></iframe>', unsafe_allow_html=True)
 
-# --- COLUMNA DERECHA: LA FICHA BLANCA EXPANDIDA ---
-with col_datos:
-    st.markdown("### 📝 Validación de Asiento: Producción Real")
+with col_ficha:
+    st.subheader("📝 Registro de Asiento")
     
     with st.container(border=True):
-        # FILA 1: IDENTIFICACIÓN (Ocupando todo el ancho)
-        c1, c2, c3 = st.columns([2, 1, 1])
-        c1.text_input("🏢 PROVEEDOR / ACREEDOR", value="RESTAURANTE EL GRIEGO S.L.")
-        c2.text_input("🆔 NIF", value="B12345678")
+        # --- BLOQUE SUPERIOR: IDENTIFICACIÓN Y CATEGORÍA ---
+        st.markdown("##### 🏢 Identificación y Naturaleza")
+        r1_c1, r1_c2 = st.columns([2, 1])
+        r1_c1.text_input("PROVEEDOR / ACREEDOR", value="RESTAURANTE EL GRIEGO", key="prov")
         # Atajo A3: 410+
-        c3.text_input("🔢 CTA. TRÁFICO (410+)", value="410.00012")
+        r1_c2.text_input("CTA. TRÁFICO (410+)", value="410.00012", key="cta_traf")
+        
+        r2_c1, r2_c2, r2_c3 = st.columns([1, 1, 1])
+        r2_c1.selectbox("TIPO OPERACIÓN", ["Gasto Corriente", "Bienes de Inversión", "Suplido"])
+        r2_c2.text_input("CATEGORÍA GASTO", value="Representación / Comidas")
+        r2_c3.text_input("NIF", value="B12345678")
 
         st.divider()
 
-        # FILA 2: EL NÚCLEO (IVA en el centro, campos grandes)
-        f1, f2, f3 = st.columns([1, 1, 1])
-        base_sugerida = round(total / (1 + (iva_perc/100)), 2)
+        # --- BLOQUE CENTRAL: EL GASTO (Referencia arriba) ---
+        st.markdown("##### 📂 Imputación del Gasto")
+        r3_c1, r3_c2 = st.columns([1, 1])
+        r3_c1.text_input("CUENTA DE GASTO", value="629.00000")
+        r3_c2.text_input("Nº FACTURA / REFERENCIA", placeholder="Ej: FRA-2024-001")
+
+        st.divider()
+
+        # --- BLOQUE INFERIOR: TOTALES (Total Abajo como disparador final) ---
+        st.markdown("##### 💰 Liquidación Económica")
         
-        # IVA Centralizado para no desvirtuar el pensamiento
-        iva_perc = f2.selectbox("📊 IVA (%)", [21, 10, 4, 0], index=1)
+        # Fila de Base e IVA (IVA en el medio)
+        base_col, iva_col, cuota_col = st.columns([1.2, 0.8, 1])
+        # Al meter el Total abajo, estos campos se recalculan
+        base_val = base_col.number_input("BASE IMPONIBLE", value=66.34, format="%.2f")
+        iva_perc = iva_col.selectbox("IVA (%)", [21, 10, 4, 0], index=1)
         
-       total = f1.number_input("💰 TOTAL FACTURA (€)", value=72.97, format="%.2f")
-        cuota_sugerida = round(total - base_sugerida, 2)
-        f3.metric("📈 CUOTA IVA", f"{cuota_sugerida} €")
+        cuota_calc = round(base_val * (iva_perc / 100), 2)
+        cuota_col.metric("CUOTA IVA", f"{cuota_calc} €")
 
-        # FILA 3: CUENTAS DE GASTO Y BASES (Alineación perfecta)
-        g1, g2, g3 = st.columns([1.5, 1.5, 1])
-        g1.text_input("📂 CTA. GASTO / INGRESO", value="629.00000")
-        base_final = g2.number_input("📝 BASE IMPONIBLE", value=base_sugerida)
-        
-        # Suplidos automáticos para cuadre (Contasol Style)
-        dif = round(total - (base_final + (base_final * (iva_perc/100))), 2)
-        with g3:
-            if abs(dif) < 0.01: st.success("✅ CUADRADO")
-            else: st.error(f"⚠️ DIF: {dif} €")
+        # EL TOTAL ABAJO (Punto final antes de contabilizar)
+        st.write("###")
+        total_fra = st.number_input("💵 TOTAL FACTURA (€)", value=72.97, format="%.2f", 
+                                    help="Este es el valor final de cuadre.")
 
-        # FILA 4: SUPLIDOS (Solo aparece si se necesita, pero no desperdicia espacio)
-        if abs(dif) > 0.01:
-            s1, s2 = st.columns([2, 2])
-            s1.text_input("📎 CTA. SUPLIDOS", value="555.00000")
-            s2.number_input("💶 IMPORTE EXENTO", value=dif, disabled=True)
+        # Verificador de Cuadre
+        dif = round(total_fra - (base_val + cuota_calc), 2)
+        if abs(dif) < 0.01:
+            st.success("✅ ASIENTO CUADRADO")
+        else:
+            st.error(f"⚠️ DESCUADRE: {dif} € (Revisa Bases o Suplidos)")
 
-    # BOTÓN "+" DINÁMICO (Para multi-IVA sin romper el layout)
-    st.button("➕ Añadir otra Base / IVA / Retención", use_container_width=True)
-
-    st.write("###")
-    # EL BOTÓN DE ENVÍO (Grande y claro para el ENTER)
-    with st.form("contabilizar_final", clear_on_submit=True):
-        if st.form_submit_button("🚀 CONTABILIZAR Y SIGUIENTE (PULSA ENTER)", 
-                                 use_container_width=True, type="primary"):
-            st.toast("Asiento exportado al TSV de A3")
+    # BOTONES DE ACCIÓN
+    st.button("➕ Añadir Línea (IVA Mixto / Retención)", use_container_width=True)
+    
+    with st.form("finalizar"):
+        if st.form_submit_button("🚀 CONTABILIZAR Y SIGUIENTE (ENTER)", use_container_width=True, type="primary"):
+            st.toast("Exportando a TSV compatible con A3...")
