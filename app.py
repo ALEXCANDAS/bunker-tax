@@ -1,66 +1,56 @@
 import streamlit as st
 
-# 1. MEMORIA DE SESIÓN (Para no perder el hilo)
-if 'index' not in st.session_state:
-    st.session_state.index = 0
+if 'idx' not in st.session_state: st.session_state.idx = 0
 
-# Simulación de lo que Gemini ha leído de tu Drive
-cola_facturas = [
-    {"empresa": "ALMUDENA FR", "nif": "FR12345678", "total": 1210.0, "iva": 21, "bandera": "🇫🇷"},
-    {"empresa": "GESTIÓN BCN", "nif": "B66778899", "total": 450.0, "iva": 21, "bandera": "🇪🇸"},
-    {"empresa": "TRADING LON", "nif": "GB99887766", "total": 2100.0, "iva": 0, "bandera": "🇬🇧"},
+# Simulación: Factura con dos bases (Metadatos de Gemini)
+cola = [
+    {"empresa": "DISTRIBUIDORA ALIMENTOS", "nif": "B12345678", "total": 150.00, "b1": 100.0, "i1": 10, "b2": 50.0, "i2": 4},
+    {"empresa": "SUMINISTROS PRO", "nif": "A87654321", "total": 121.00, "b1": 100.0, "i1": 21, "b2": 0.0, "i2": 0},
 ]
 
-def sig_factura():
-    if st.session_state.index < len(cola_facturas) - 1:
-        st.session_state.index += 1
+def siguiente():
+    if st.session_state.idx < len(cola) - 1:
+        st.session_state.idx += 1
     else:
-        st.session_state.finalizado = True
+        st.success("✅ ¡Cola terminada!")
 
-# --- INTERFAZ ---
-st.title("🚀 Validación Ultra-Rápida")
+st.title("🚀 Registro Multi-Base Alta Velocidad")
 
-if 'finalizado' not in st.session_state:
-    f = cola_facturas[st.session_state.index]
+if st.session_state.idx < len(cola):
+    f = cola[st.session_state.idx]
     
-    col_a, col_b = st.columns([1, 2])
-    
-    with col_a:
-        st.markdown(f"""
-            <div style="background: white; padding: 20px; border-radius: 15px; border-left: 10px solid #000;">
-                <span style="font-size: 40px;">{f['bandera']}</span><br>
-                <b>{f['empresa']}</b><br>
-                <small>Pendiente de validar</small>
-            </div>
-        """, unsafe_allow_html=True)
-        st.write(f"📊 Factura {st.session_state.index + 1} de {len(cola_facturas)}")
+    with st.form("multi_base_form", clear_on_submit=True):
+        # CABECERA GOLPE DE OJO
+        c1, c2, c3 = st.columns([2,1,1])
+        c1.subheader(f"🏢 {f['empresa']}")
+        total_real = c2.number_input("TOTAL FACTURA", value=f['total'], format="%.2f")
+        c3.metric("Diferencia", f"{total_real - (f['b1']*(1+f['i1']/100) + f['b2']*(1+f['i2']/100)):.2f} €")
 
-    with col_b:
-        # EL SECRETO: 'st.form' captura el ENTER del teclado automáticamente
-        with st.form("ficha_trabajo", clear_on_submit=True):
-            st.subheader("📝 Ficha Blanca de Edición")
-            
-            # Los campos que Gemini ya ha pre-rellenado
-            nif_input = st.text_input("NIF (Validar)", value=f['nif'])
-            total_input = st.number_input("TOTAL FACTURA (€)", value=f['total'])
-            iva_input = st.selectbox("IVA %", [21, 10, 4, 0], index=0 if f['iva'] == 21 else 3)
-            
-            # Cálculo tipo A3 en tiempo real (informativo)
-            bi = total_input / (1 + (iva_input/100))
-            st.info(f"Base: {bi:.2f}€ | Cuota: {(total_input-bi):.2f}€")
-            
-            st.write("---")
-            
-            # El botón de 'Submit' es el que se activa con el ENTER
-            enviar = st.form_submit_button("✅ CONTABILIZAR Y SIGUIENTE (PULSA ENTER)", 
-                                         on_click=sig_factura, 
-                                         use_container_width=True, 
-                                         type="primary")
+        st.divider()
 
-else:
-    st.balloons()
-    st.success("🎉 ¡Todas las facturas han sido contabilizadas!")
-    if st.button("Reiniciar cola de trabajo"):
-        del st.session_state.finalizado
-        st.session_state.index = 0
-        st.rerun()
+        # BLOQUE DE BASES (Configurables y Tabulables)
+        # Base 1
+        col1, col2, col3 = st.columns([3, 1, 2])
+        b1 = col1.number_input("Base Imponible 1", value=f['b1'])
+        i1 = col2.selectbox("% IVA 1", [21, 10, 4, 0], index=1 if f['i1']==10 else 0)
+        col3.write(f"Cuota: {b1 * (i1/100):.2f} €")
+
+        # Base 2
+        col4, col5, col6 = st.columns([3, 1, 2])
+        b2 = col4.number_input("Base Imponible 2", value=f['b2'])
+        i2 = col5.selectbox("% IVA 2", [21, 10, 4, 0], index=2 if f['i2']==4 else 3)
+        col6.write(f"Cuota: {b2 * (i2/100):.2f} €")
+        
+        # Base 3 (Opcional, siempre ahí pero no estorba)
+        col7, col8, col9 = st.columns([3, 1, 2])
+        b3 = col7.number_input("Base Imponible 3", value=0.0)
+        i3 = col8.selectbox("% IVA 3", [21, 10, 4, 0], index=3)
+        col9.write(f"Cuota: 0.00 €")
+
+        st.divider()
+        
+        # BOTÓN QUE CAPTURA EL ENTER
+        # Al terminar de picar la B2, un Tab más te lleva aquí y Enter salta de factura.
+        st.form_submit_button("✅ VALIDAR Y SIGUIENTE (ENTER)", on_click=siguiente, type="primary", use_container_width=True)
+
+st.caption("⌨️ **Truco Asesor:** Usa `Tab` para saltar entre bases. Si la factura solo tiene una base, pulsa `Tab` rápido hasta llegar al botón y dale a `Enter`.")
