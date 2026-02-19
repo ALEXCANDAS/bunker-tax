@@ -1,74 +1,78 @@
 import streamlit as st
 import pandas as pd
 
-# 1. EL "ADN" DEL BÚNKER (Las 28 columnas reales)
-CAMPOS_28 = [
+# 1. ARQUITECTURA TAXDOME (Estonia Vibe)
+st.set_page_config(layout="wide", page_title="Búnker Pro", initial_sidebar_state="expanded")
+
+# 2. LOS 28 CAMPOS MAESTROS (La base para el .dat)
+CAMPOS_DAT = [
     "ID_FACTURA", "FECHA_FACTURA", "NIF", "CUENTA_CONTRA", "TOTAL", 
-    "BI1", "IVA1", "Cuota_IVA1", "BI2", "IVA2", "Cuota_IVA2", 
-    "BI3", "IVA3", "Cuota_IVA3", "RETENCION_%", "RETENCION_€",
+    "BI1", "IVA1", "CUOTA1", "BI2", "IVA2", "CUOTA2", 
+    "BI3", "IVA3", "CUOTA3", "RETENCION_%", "RETENCION_€",
     "TRIMESTRE", "TIPO_OPERACION", "CATEGORIA", "FECHA_APUNTE", 
     "ID_EMPRESA", "TIPO_FACTURA", "ID_TERCERO", "CP_TERCERO", 
     "IMPRESO", "ID_CUENTA_BASE", "CUENTA_BASE", "ESTADO"
 ]
 
-# 2. MEMORIA ANTIGRAVITY (Para no repetir trabajo)
-if 'cols_vistas' not in st.session_state:
-    st.session_state.cols_vistas = ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "ESTADO"]
+# 3. MEMORIA DE VISTA (Lo que tú elijes ver)
+if 'vision_panel' not in st.session_state:
+    # Por defecto, solo lo esencial para trabajar rápido
+    st.session_state.vision_panel = ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "ESTADO"]
 
-# --- CONFIGURACIÓN DE PANTALLA ---
-st.set_page_config(layout="wide", page_title="Búnker Tax Engine")
-
-# --- HEADER PROFESIONAL ---
-c1, c2 = st.columns([3, 1])
-with c1:
-    st.title("📄 Libros de Registro | TaxDome Standard")
-    st.caption(f"📍 Empresa: {st.session_state.get('empresa_actual', 'BÚNKER TAX S.L.')}")
-with c2:
-    st.write("###")
-    st.button("🔄 Sincronizar Google Drive", type="primary", use_container_width=True)
-
-# --- EL PANEL DE MANDOS (Tabs de alta velocidad) ---
-tab_libro, tab_config, tab_pipeline = st.tabs(["📋 LIBRO DE REGISTRO", "⚙️ CONFIGURACIÓN DE VISTA", "🚀 PIPELINE"])
-
-with tab_config:
-    st.subheader("🛠️ Personalizar Ventanillas de Lectura")
-    # Aquí tienes las 28 para elegir, pero sin que se rompa nada
-    st.session_state.cols_vistas = st.multiselect(
-        "Selecciona las columnas para tu pantalla de trabajo:",
-        options=CAMPOS_28,
-        default=st.session_state.cols_vistas
-    )
-    st.info("💡 El orden en que las selecciones será el orden de la tabla.")
-
-with tab_libro:
-    # 3. EL MOTOR DE INTRODUCCIÓN RÁPIDA (Donde no fallamos)
-    # Creamos un DataFrame vacío pero con los 28 campos
-    data_pro = {col: ["---"] for col in CAMPOS_28}
-    # Ejemplo real
-    data_pro["FECHA_FACTURA"] = ["19/02/2026"]
-    data_pro["CUENTA_CONTRA"] = ["ALMUDENA FRANCIA"]
-    data_pro["TOTAL"] = ["1.250,00 €"]
-    data_pro["ESTADO"] = ["Pendiente"]
+# --- SIDEBAR: EL FILTRO DE VISIÓN ---
+with st.sidebar:
+    st.title("🛡️ Búnker Pro")
+    st.subheader("🏢 Empresa")
+    empresa = st.selectbox("Seleccionar Sociedad", ["001 - BÚNKER TAX S.L.", "002 - ALMUDENA FR"])
     
-    df = pd.DataFrame(data_pro)
+    st.divider()
+    st.subheader("🛠️ FILTRO DE PANEL")
+    st.write("Configura tu lectura óptima (el resto se guarda para el .dat):")
+    
+    # El filtro que separa la visión de la base de datos
+    st.session_state.vision_panel = st.multiselect(
+        "Columnas activas en panel:",
+        options=CAMPOS_DAT,
+        default=st.session_state.vision_panel
+    )
+    
+    st.divider()
+    if st.button("🔄 SYNC DRIVE", type="primary", use_container_width=True):
+        st.success("Sincronizando...")
 
-    # LA TABLA EDITABLE (Estilo Excel/TaxDome)
-    # Solo mostramos las que has elegido, pero puedes editar los datos
+# --- CUERPO: PANTALLA DE OPERACIONES ---
+st.title("📄 Libro de Registro")
+
+tab_asientos, tab_export = st.tabs(["📝 PANEL DE TRABAJO", "📥 EXPORTACIÓN .DAT"])
+
+with tab_asientos:
+    # Creamos un DataFrame con los 28 campos vacíos (el .dat completo)
+    # Pero en el panel solo inyectamos lo que tú has filtrado
+    df_maestro = pd.DataFrame([{c: "" for c in CAMPOS_DAT} for _ in range(10)])
+    
+    # Datos de ejemplo
+    df_maestro.at[0, "FECHA_FACTURA"] = "19/02/2026"
+    df_maestro.at[0, "CUENTA_CONTRA"] = "ALMUDENA FR"
+    df_maestro.at[0, "TOTAL"] = "1.250,00"
+    df_maestro.at[0, "ESTADO"] = "⚡ Pendiente"
+
+    st.write(f"### Mostrando {len(st.session_state.vision_panel)} de 28 campos")
+    
+    # EL EDITOR: Tú solo ves y tocas lo que has filtrado
     st.data_editor(
-        df[st.session_state.cols_vistas],
+        df_maestro[st.session_state.vision_panel],
         use_container_width=True,
         hide_index=True,
-        num_rows="dynamic", # Permite añadir filas dándole al "+"
-        key="asientos_pro"
+        num_rows="dynamic",
+        key="editor_pro"
     )
 
-with tab_pipeline:
-    st.subheader("🏁 Estado del Trimestre")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Pendientes", "14", "2 nuevas")
-    col2.metric("Revisadas", "45", "10%")
-    col3.metric("Contabilizadas", "120", "OK")
+with tab_export:
+    st.subheader("Generador de archivos para Hacienda")
+    st.write("Aquí el sistema utiliza los 28 campos ocultos para generar el fichero oficial.")
+    if st.button("📦 Generar .dat"):
+        st.info("Procesando los 28 campos para el formato oficial...")
 
 # --- FOOTER ---
 st.divider()
-st.caption("Búnker Tax v2.0 | Estonia SaaS Framework | Desarrollado con Vibe Coding")
+st.caption("Búnker Pro v2.0 | Estonia SaaS Framework | Filtro de Lectura Óptima Activo")
