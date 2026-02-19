@@ -1,76 +1,76 @@
 import streamlit as st
 
-# 1. CSS PARA ALTA DENSIDAD (Aprovechar cada píxel)
-st.set_page_config(layout="wide", page_title="Búnker Pro | Speed Entry")
+# 1. CONFIGURACIÓN Y ESTÉTICA
+st.set_page_config(layout="wide", page_title="Búnker Pro | Ultra Speed")
 
-st.markdown("""
-    <style>
-    .reportview-container { background: #f0f2f6; }
-    .ficha-blanca {
-        background: white;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 10px solid #2ecc71; /* Verde si Gemini está seguro, Rojo si duda */
-        margin-bottom: 10px;
-        font-size: 14px;
-    }
-    .status-agente { font-size: 11px; color: #64748b; font-style: italic; }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. SIMULACIÓN DE METADATOS (Lo que Gemini ya ha leído de Drive)
+if 'indice_actual' not in st.session_state:
+    st.session_state.indice_actual = 0
 
-# --- CABECERA COMPACTA ---
-c_title, c_sync = st.columns([4, 1])
-c_title.title("🚀 Validación de Asientos Flash")
-if c_sync.button("🔄 Sincronizar Drive", type="primary", use_container_width=True):
-    st.toast("Escaneando metadatos...")
+cola_facturas = [
+    {"empresa": "ALMUDENA FR", "nif": "FR12345678", "total": 1210.00, "iva": 21, "bandera": "🇫🇷", "modelos": "303+349"},
+    {"empresa": "GESTIÓN BCN", "nif": "B66778899", "total": 450.00, "iva": 21, "bandera": "🇪🇸", "modelos": "303"},
+    {"empresa": "TRADING LON", "nif": "GB99887766", "total": 2100.00, "iva": 0, "bandera": "🇬🇧", "modelos": "303+347"},
+]
 
-# --- INTERFAZ DUAL ---
-col_cola, col_entrada = st.columns([1, 2])
+# Función para saltar a la siguiente
+def contabilizar_y_siguiente():
+    if st.session_state.indice_actual < len(cola_facturas) - 1:
+        st.session_state.indice_actual += 1
+        st.toast(f"✅ Factura {st.session_state.indice_actual} contabilizada. Cargando siguiente...")
+    else:
+        st.success("🎉 ¡Todas las facturas de la cola han sido procesadas!")
 
+# --- INTERFAZ ---
+st.title("🚀 Validación en Cadena (Modo Asesor)")
+
+col_cola, col_ficha = st.columns([1, 2])
+
+# IZQUIERDA: La cola de espera
 with col_cola:
-    st.subheader("📥 Cola de Validación")
-    # Ficha que "habla" de un vistazo
-    st.markdown("""
-        <div class="ficha-blanca">
-            <b>🇫🇷 ALMUDENA FRANCIA</b> <span style="float:right;">1.210,00 €</span><br>
-            <span class="status-agente">Gemini: Confianza 98% (Modelos 303, 349)</span>
-        </div>
-        <div class="ficha-blanca" style="border-left-color: #e74c3c;">
-            <b>🇪🇸 GESTIÓN BCN</b> <span style="float:right;">450,00 €</span><br>
-            <span class="status-agente">Gemini: Confianza 60% (Duda en NIF)</span>
-        </div>
-    """, unsafe_allow_html=True)
+    st.subheader("📬 Pendientes")
+    for i, f in enumerate(cola_facturas):
+        # Resaltamos la que estamos editando ahora
+        style = "border: 2px solid #2ecc71;" if i == st.session_state.indice_actual else "opacity: 0.5;"
+        st.markdown(f"""
+            <div style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 5px; {style}">
+                {f['bandera']} <b>{f['empresa']}</b><br>
+                <small>{f['total']} € - Mod: {f['modelos']}</small>
+            </div>
+        """, unsafe_allow_html=True)
 
-with col_entrada:
-    st.subheader("📝 Ficha Blanca de Edición (Lógica A3)")
+# DERECHA: La Ficha Blanca Activa
+with col_ficha:
+    factura = cola_facturas[st.session_state.indice_actual]
+    st.subheader(f"📝 Editando: {factura['empresa']}")
     
     with st.container(border=True):
-        # FILA 1: Identificación básica
-        f1c1, f1c2, f1c3, f1c4 = st.columns(4)
-        f1c1.text_input("NIF", "FR12345678")
-        f1c2.date_input("Fecha")
-        f1c3.text_input("Cuenta", "400.0001")
-        f1c4.selectbox("Modelo", ["303+349", "303", "130"])
-
-        # FILA 2: LÓGICA DE CÁLCULO A3 (Automático)
+        c1, c2 = st.columns(2)
+        nif_input = c1.text_input("NIF", value=factura['nif'], key=f"nif_{st.session_state.indice_actual}")
+        fecha_input = c2.date_input("Fecha Factura", key=f"date_{st.session_state.indice_actual}")
+        
         st.divider()
-        f2c1, f2c2, f2c3, f2c4 = st.columns([2, 1, 1, 1])
         
-        total = f2c1.number_input("TOTAL FACTURA (€)", value=1210.00)
-        tipo_iva = f2c2.selectbox("IVA %", [21, 10, 4, 0])
+        # LÓGICA A3 AUTOMÁTICA
+        col_t, col_i = st.columns([2, 1])
+        total_f = col_t.number_input("TOTAL FACTURA (€)", value=factura['total'], key=f"tot_{st.session_state.indice_actual}")
+        tipo_iva = col_i.selectbox("IVA %", [21, 10, 4, 0], index=0 if factura['iva']==21 else 3)
         
-        # Cálculo en tiempo real
-        bi = total / (1 + (tipo_iva/100))
-        cuota = total - bi
+        bi = total_f / (1 + (tipo_iva/100))
+        cuota = total_f - bi
         
-        f2c3.metric("Base (BI1)", f"{bi:.2f} €")
-        f2c4.metric("Cuota IVA", f"{cuota:.2f} €")
+        # Métricas de confirmación visual
+        m1, m2 = st.columns(2)
+        m1.metric("Base (BI1)", f"{bi:.2f} €")
+        m2.metric("Cuota IVA", f"{cuota:.2f} €")
+        
+        st.divider()
+        
+        # BOTÓN DE ACCIÓN (El "Enter" de la contabilidad)
+        # En Streamlit, si el foco está en el formulario, al pulsar el botón se dispara la función
+        st.button("✅ CONTABILIZAR (ENTER)", 
+                  on_click=contabilizar_y_siguiente, 
+                  type="primary", 
+                  use_container_width=True)
 
-        # FILA 3: Los 28 campos comprimidos
-        with st.expander("⚙️ Metadatos .dat (Campos secundarios)"):
-            st.columns(4)[0].text_input("ID Factura", "2026/045")
-            st.columns(4)[1].text_input("CP", "08001")
-            st.columns(4)[2].text_input("Categoría", "Gasto General")
-            st.columns(4)[3].text_input("Cta. Base", "600.0")
-
-        st.button("✅ CONTABILIZAR Y SIGUIENTE (Enter)", use_container_width=True)
+st.caption("⌨️ **Modo Experto:** Revisa los datos y pulsa el botón para pasar a la siguiente factura automáticamente.")
