@@ -44,54 +44,39 @@ if menu == "🕹️ Control de Modelos":
 
 # --- 2. ENTRADA DE FACTURAS (LIBRO DE REGISTRO CON FICHAS MOVIBLES) ---
 elif menu == "📄 Entrada de Facturas":
-    # Identificador de Empresa en la parte superior
     st.header(f"📄 Libro de Registro: {empresa_actual}")
     
-    st.info("💡 CONSEJO ANTIGRAVITY: El orden en que selecciones las fichas será el orden de las columnas en la tabla.")
+    # Importamos la pieza que acabas de añadir en requirements
+    from streamlit_sortables import sort_items
 
-    # EL TRUCO DE LAS FICHAS MOVIBLES:
-    # La lista de abajo son todas tus columnas. 
-    # Si pinchas primero 'TOTAL' y luego 'NIF', aparecerán en ese orden.
-    fichas_disponibles = [
-        "ID_FACTURA", "FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", 
-        "TIPO_OPERACION", "TRIMESTRE", "BI1", "IVA1", "Cuota_IVA1", 
-        "CATEGORIA", "CUENTA_BASE", "CP_TERCERO"
-    ]
-    
-    fichas_seleccionadas = st.multiselect(
-        "Configura tu panel (añade y ordena tus fichas):",
-        options=fichas_disponibles,
-        default=["ID_FACTURA", "FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL"]
-    )
+    st.subheader("🛠️ Configurador de Panel")
+    st.write("Arrastra las fichas para cambiar el orden de las columnas:")
 
-    # Datos de ejemplo (Asegúrate de que los nombres coincidan con las fichas)
-    data = [
-        {
-            "ID_FACTURA": "FR-01", "FECHA_FACTURA": "15/02/2026", 
-            "CUENTA_CONTRA": "ALMUDENA FR", "NIF": "ESA12345678", 
-            "TOTAL": 1210.00, "TIPO_OPERACION": "03 FRANCIA", 
-            "TRIMESTRE": "1T", "BI1": 1000.00, "IVA1": 21, 
-            "Cuota_IVA1": 210, "CATEGORIA": "COMPRAS", 
-            "CUENTA_BASE": "6000001", "CP_TERCERO": "75001"
-        }
+    # Lista de tus campos profesionales
+    columnas_base = [
+        "FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL", 
+        "NIF", "TIPO_OPERACION", "TRIMESTRE"
     ]
-    
+
+    # ESTA ES LA MAGIA: Aparecerán cajitas que se mueven con el ratón
+    orden_fichas = sort_items(columnas_base, direction="horizontal")
+
+    # Datos de prueba
+    data = [{
+        "FECHA_FACTURA": "15/02/2026", "CUENTA_CONTRA": "ALMUDENA FR", 
+        "TOTAL": 1210.00, "NIF": "ESA12345678", 
+        "TIPO_OPERACION": "03 FRANCIA", "TRIMESTRE": "1T"
+    }]
     df = pd.DataFrame(data)
 
-    # LA MAGIA: Si hay fichas elegidas, filtramos y REORDENAMOS el dataframe
-    if fichas_seleccionadas:
-        df_display = df[fichas_seleccionadas]
-    else:
-        # Si borras todas, por defecto te enseña estas 3 para no quedarse en blanco
-        df_display = df[["ID_FACTURA", "CUENTA_CONTRA", "TOTAL"]]
-
     st.divider()
-    
-    # Dibujamos la tabla con el orden de fichas que hayas elegido
-    st.dataframe(df_display, use_container_width=True, hide_index=True)
-    
+
+    # La tabla se ordena sola según dejes las fichas arriba
+    st.dataframe(df[orden_fichas], use_container_width=True, hide_index=True)
     # Tu botón de Drive para mañana
-    st.button("🔄 Sincronizar con Google Drive")
+    if st.button("🚀 Finalizar Configuración"):
+    st.balloons()
+    st.success("¡Estructura de hoy guardada con éxito, Alejandro!")
 
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
