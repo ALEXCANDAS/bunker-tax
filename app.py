@@ -34,61 +34,56 @@ if menu == "🕹️ Control de Modelos":
         st.write("Historial de hoy:")
         st.code("09:30 - Lectura OK - Factura_FR_Almudena.pdf\n10:15 - Lectura OK - Factura_Nac_001.pdf")
 
-# --- 2. ENTRADA DE FACTURAS (CON FILTRO Y DRIVE) ---
+# --- 2. ENTRADA DE FACTURAS (LIBRO DE REGISTRO CON FICHAS MOVIBLES) ---
 elif menu == "📄 Entrada de Facturas":
-    # 1. IDENTIFICADOR DE EMPRESA (Para que sepas dónde estás)
-    st.sidebar.markdown("---")
-    empresa_actual = st.sidebar.selectbox(
-        "🏢 EMPRESA EN USO:",
-        ["001 - BÚNKER TAX S.L.", "002 - ALMUDENA FRANCIA", "003 - PEDRO GESTIÓN"]
-    )
-    st.sidebar.warning(f"Operando en: **{empresa_actual}**")
-
+    # Identificador de Empresa en la parte superior
     st.header(f"📄 Libro de Registro: {empresa_actual}")
-
-    # 2. FILTRO DE VISTA (Para evitar la redundancia)
-    col_v1, col_v2 = st.columns([2, 1])
-    with col_v1:
-        vista = st.multiselect(
-            "Seleccionar campos visibles (Limpiar para ver todo):",
-            ["FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", "TIPO_OPERACION", "IVA1", "BI1"],
-            default=["FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL", "TIPO_OPERACION"]
-        )
     
-    with col_v2:
-        trimestre = st.radio("Trimestre", ["Todos", "1T", "2T", "3T", "4T"], horizontal=True)
+    st.info("💡 CONSEJO ANTIGRAVITY: El orden en que selecciones las fichas será el orden de las columnas en la tabla.")
 
-    # DATOS (Tus 28 campos están aquí)
+    # EL TRUCO DE LAS FICHAS MOVIBLES:
+    # La lista de abajo son todas tus columnas. 
+    # Si pinchas primero 'TOTAL' y luego 'NIF', aparecerán en ese orden.
+    fichas_disponibles = [
+        "ID_FACTURA", "FECHA_FACTURA", "CUENTA_CONTRA", "NIF", "TOTAL", 
+        "TIPO_OPERACION", "TRIMESTRE", "BI1", "IVA1", "Cuota_IVA1", 
+        "CATEGORIA", "CUENTA_BASE", "CP_TERCERO"
+    ]
+    
+    fichas_seleccionadas = st.multiselect(
+        "Configura tu panel (añade y ordena tus fichas):",
+        options=fichas_disponibles,
+        default=["ID_FACTURA", "FECHA_FACTURA", "CUENTA_CONTRA", "TOTAL"]
+    )
+
+    # Datos de ejemplo (Asegúrate de que los nombres coincidan con las fichas)
     data = [
         {
-            "ID_EMPRESA": "001", "FECHA_APUNTE": "19/02/2026", "FECHA_FACTURA": "15/02/2026", 
-            "TRIMESTRE": "1T", "ID_FACTURA": "FR-01", "ID_CUENTA_CONTRA": "4000001", 
-            "CUENTA_CONTRA": "ALMUDENA FR", "TIPO_FACTURA": "RECIBIDA", "NIF": "ESA12345678", 
-            "TOTAL": 1210.00, "BI1": 1000.00, "IVA1": 21, "Cuota_IVA1": 210, 
-            "TIPO_OPERACION": "03 FRANCIA", "CUENTA_BASE": "6000001"
-            # ... el resto de campos siguen existiendo en el fondo
+            "ID_FACTURA": "FR-01", "FECHA_FACTURA": "15/02/2026", 
+            "CUENTA_CONTRA": "ALMUDENA FR", "NIF": "ESA12345678", 
+            "TOTAL": 1210.00, "TIPO_OPERACION": "03 FRANCIA", 
+            "TRIMESTRE": "1T", "BI1": 1000.00, "IVA1": 21, 
+            "Cuota_IVA1": 210, "CATEGORIA": "COMPRAS", 
+            "CUENTA_BASE": "6000001", "CP_TERCERO": "75001"
         }
     ]
     
     df = pd.DataFrame(data)
 
-    # Lógica de visibilidad: Si no hay nada elegido en 'vista', muestra todo.
-    # Si hay algo elegido, filtra las columnas.
-    if vista:
-        df_display = df[vista]
+    # LA MAGIA: Si hay fichas elegidas, filtramos y REORDENAMOS el dataframe
+    if fichas_seleccionadas:
+        df_display = df[fichas_seleccionadas]
     else:
-        df_display = df
-
-    if trimestre != "Todos":
-        df_display = df[df['TRIMESTRE'] == trimestre]
+        # Si borras todas, por defecto te enseña estas 3 para no quedarse en blanco
+        df_display = df[["ID_FACTURA", "CUENTA_CONTRA", "TOTAL"]]
 
     st.divider()
     
-    # 3. LA TABLA RESULTANTE
+    # Dibujamos la tabla con el orden de fichas que hayas elegido
     st.dataframe(df_display, use_container_width=True, hide_index=True)
     
-    # Botón rápido para exportar (Lo que le gustará a Pedro)
-    st.download_button("📥 Descargar este Libro (Excel)", "datos_bunker.csv", "text/csv")
+    # Tu botón de Drive para mañana
+    st.button("🔄 Sincronizar con Google Drive")
 
 # --- 3. CALENDARIO DE REQUERIMIENTOS ---
 elif menu == "📅 Calendario Fiscal":
