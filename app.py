@@ -1,58 +1,23 @@
+# Así era la estructura del "Dato Tabulador" que vimos:
 import streamlit as st
 
-# 1. MOTOR ESTABLE (Sin errores de formulario)
-if 'base' not in st.session_state: st.session_state.base = 100.0
-if 'iva' not in st.session_state: st.session_state.iva = 21
-if 'isp' not in st.session_state: st.session_state.isp = False
+col_pdf, col_datos = st.columns([1.5, 1]) # Pantalla partida
 
-def calc():
-    # IVA e Inversión del Sujeto Pasivo
-    st.session_state.cuota = round(st.session_state.base * (st.session_state.iva / 100), 2)
-    if st.session_state.isp:
-        st.session_state.total = st.session_state.base # ISP no suma IVA al total
-    else:
-        st.session_state.total = round(st.session_state.base + st.session_state.cuota, 2)
+with col_pdf:
+    st.subheader("Documento Original")
+    # Aquí se visualiza el PDF sin que tape nada
+    st.markdown(f'<iframe src="{pdf_url}" width="100%" height="800"></iframe>', unsafe_allow_html=True)
 
-if 'total' not in st.session_state: calc()
-
-st.set_page_config(layout="wide")
-st.title("🛡️ Búnker Pro | Validación Final")
-
-# 2. INTERFAZ DE TRABAJO
-c1, c2, c3 = st.columns([1, 1, 1])
-
-with c1:
-    st.subheader("📄 Datos Factura")
-    prov = st.text_input("Proveedor", value="ADOBE")
-    nif = st.text_input("NIF", value="IE6362892H")
-    org = st.selectbox("Origen", ["España 🇪🇸", "Europa 🇪🇺", "Extra 🌎"], index=1)
-
-with c2:
-    st.subheader("⚙️ Configuración")
-    st.session_state.isp = st.checkbox("Inversión Sujeto Pasivo (ISP)", value=st.session_state.isp, on_change=calc)
-    st.session_state.base = st.number_input("Base Imponible", value=st.session_state.base, on_change=calc)
-    st.session_state.iva = st.selectbox("IVA %", [21, 10, 4, 0], index=0, on_change=calc)
-
-with c3:
-    st.subheader("💵 Resultado")
-    st.metric("Total Factura", f"{st.session_state.total} €")
-    st.metric("Cuota IVA", f"{st.session_state.cuota} €")
-    if st.button("🚀 REGISTRAR ASIENTO"):
-        st.success("Asiento enviado al libro de registro.")
-
-st.divider()
-
-# 3. LIBRO DE REGISTRO SENCILLO (SIN ERRORES)
-st.subheader("📋 Libro de Registro")
-cols = st.columns([1, 1, 1, 1, 1, 1])
-headers = ["SUJETO", "BASE", "IVA", "TOTAL", "ISP", "MODELOS"]
-for col, h in zip(cols, headers): col.write(f"**{h}**")
-
-# Fila de ejemplo
-f = st.columns([1, 1, 1, 1, 1, 1])
-f[0].write(prov)
-f[1].write(f"{st.session_state.base}€")
-f[2].write(f"{st.session_state.cuota}€")
-f[3].write(f"{st.session_state.total}€")
-f[4].write("SÍ" if st.session_state.isp else "NO")
-f[5].write("303, 349" if org == "Europa 🇪🇺" else "303")
+with col_datos:
+    st.subheader("Registro Contable")
+    # Formulario rápido para "tabular"
+    with st.form("registro_factura"):
+        nif = st.text_input("NIF Emisor", value=dato_ia['nif'])
+        base = st.text_input("Base Imponible", value=dato_ia['base'])
+        iva = st.text_input("Cuota IVA", value=dato_ia['iva'])
+        total = st.text_input("Total Factura", value=dato_ia['total'])
+        
+        # El botón que lo manda todo al A3/n8n
+        if st.form_submit_button("REGISTRAR Y SIGUIENTE (Enter)"):
+            enviar_a_n8n(nif, base, iva, total)
+            st.success("¡Registrado!")
